@@ -5,16 +5,16 @@
  * ------------------------------------------------------------------ */
 
 const CLIENT_TYPES = [
-  { id: 'office-light', label: 'Büro – leicht (Web, E-Mail, SaaS)', mbps: 2 },
-  { id: 'office-heavy', label: 'Büro – schwer (Cloud-Workloads, Downloads)', mbps: 10 },
-  { id: 'video-conf', label: 'Videokonferenz (Teams/Zoom, HD)', mbps: 4 },
-  { id: 'stream-hd', label: 'Video-Streaming (HD)', mbps: 8 },
-  { id: 'stream-4k', label: 'Video-Streaming (4K)', mbps: 25 },
-  { id: 'voip', label: 'VoIP-Telefonie', mbps: 0.1 },
-  { id: 'file-transfer', label: 'Datei-Transfer / CAD / Backup', mbps: 50 },
-  { id: 'iot', label: 'Drucker / Scanner / IoT', mbps: 0.5 },
-  { id: 'pos', label: 'Kasse / POS', mbps: 1 },
-  { id: 'custom', label: 'Eigener Client-Typ', mbps: 10 },
+  { id: 'office-light', label: 'Office – light (web, email, SaaS)', mbps: 2 },
+  { id: 'office-heavy', label: 'Office – heavy (cloud workloads, downloads)', mbps: 10 },
+  { id: 'video-conf', label: 'Video conference (Teams/Zoom, HD)', mbps: 4 },
+  { id: 'stream-hd', label: 'Video streaming (HD)', mbps: 8 },
+  { id: 'stream-4k', label: 'Video streaming (4K)', mbps: 25 },
+  { id: 'voip', label: 'VoIP telephony', mbps: 0.1 },
+  { id: 'file-transfer', label: 'File transfer / CAD / backup', mbps: 50 },
+  { id: 'iot', label: 'Printers / scanners / IoT', mbps: 0.5 },
+  { id: 'pos', label: 'Point of sale / POS', mbps: 1 },
+  { id: 'custom', label: 'Custom client type', mbps: 10 },
 ];
 const TYPE_BY_ID = Object.fromEntries(CLIENT_TYPES.map((t) => [t.id, t]));
 
@@ -22,9 +22,9 @@ const UPLINK_CLASSES_GBPS = [1, 10, 25, 40, 100];
 const COMPARISON_CLASSES_GBPS = [1, 10, 25];
 const SWITCH_SIZES = [8, 12, 24, 28, 48, 52];
 
-// Planning goodput per AP radio in Mbit/s (conservative, ~40–45 % of PHY rate).
+// Planning goodput per AP radio in Mbit/s (conservative, ~40–45% of PHY rate).
 const AP_PROFILES = {
-  '2g': { label: '2,4 GHz (Wi-Fi 4/6)', capacity: { 20: 50, 40: 100 } },
+  '2g': { label: '2.4 GHz (Wi-Fi 4/6)', capacity: { 20: 50, 40: 100 } },
   '5g-ac': { label: '5 GHz – Wi-Fi 5 (802.11ac)', capacity: { 20: 80, 40: 170, 80: 350 } },
   '5g-ax': { label: '5 GHz – Wi-Fi 6 (802.11ax)', capacity: { 20: 110, 40: 220, 80: 450, 160: 900 } },
   '6g-6e': { label: '6 GHz – Wi-Fi 6E', capacity: { 20: 110, 40: 220, 80: 450, 160: 900 } },
@@ -109,7 +109,7 @@ function recommendUplink(effectiveMbps) {
   return { gbps, utilization, lowReserve: utilization > BORDERLINE_LIMIT };
 }
 
-// Smallest common switch with 20 % port reserve (integer math: size ≥ ports × 1.2).
+// Smallest common switch with 20% port reserve (integer math: size ≥ ports × 1.2).
 function recommendSwitch(ports) {
   const size = SWITCH_SIZES.find((s) => s * 10 >= ports * 12);
   if (size !== undefined) return { size, count: 1 };
@@ -166,7 +166,7 @@ function calcWlan({ rows, profile, width, capacity }) {
 }
 
 /* ------------------------------------------------------------------ *
- * Formatting (German)
+ * Formatting (en-US)
  * ------------------------------------------------------------------ */
 
 const NBSP = '\u00a0';
@@ -175,7 +175,7 @@ const numberFormats = new Map();
 function formatNumber(value, maxDigits = 2, minDigits = 0, grouping = true) {
   const key = `${maxDigits}|${minDigits}|${grouping}`;
   if (!numberFormats.has(key)) {
-    numberFormats.set(key, new Intl.NumberFormat('de-DE', {
+    numberFormats.set(key, new Intl.NumberFormat('en-US', {
       minimumFractionDigits: minDigits,
       maximumFractionDigits: maxDigits,
       useGrouping: grouping,
@@ -196,27 +196,29 @@ function formatRateText(mbps) {
   return `${num}${NBSP}${unit}`;
 }
 
-// One decimal below 100 %; whole numbers above, e.g. "36,7 %" and "1500 %".
+// One decimal below 100%; whole numbers above, e.g. "36.7%" and "1500%".
 function formatPercent(ratio) {
   const pct = ratio * 100;
   const num = pct < 100 ? formatNumber(pct, 1, 1) : formatNumber(pct, 0, 0, false);
-  return `${num}${NBSP}%`;
+  return `${num}%`;
 }
 
 function accessPortText(accessPort) {
-  if (accessPort.special) return { num: '10', unit: 'Gbit/s+ (Sonderfall)' };
+  if (accessPort.special) return { num: '10', unit: 'Gbit/s+ (special case)' };
   return formatRate(accessPort.gbps * 1000);
 }
 
 function switchText({ size, count }) {
   const prefix = count > 1 ? `${count}${NBSP}×${NBSP}` : '';
-  return `z. B. ${prefix}${size}-Port-Switch (mit 20${NBSP}% Reserve)`;
+  return `e.g. ${prefix}${size}-port switch (with 20% reserve)`;
 }
 
+const EMPTY_TEXT = 'No clients configured. Add a client type or enter a count above 0.';
+
 const VERDICT_TEXT = {
-  ok: 'OK – Reserven vorhanden',
-  warn: 'Grenzwertig – wird bei Lastspitzen eng',
-  crit: 'Überlastet – APs hinzufügen, Kanalbreite erhöhen oder Profil wechseln',
+  ok: 'OK – headroom available',
+  warn: 'Borderline – tight during load peaks',
+  crit: 'Overloaded – add APs, widen the channel or change the profile',
 };
 
 /* ------------------------------------------------------------------ *
@@ -348,7 +350,7 @@ function renderBreakdown(tab, result) {
     const td = tr.insertCell();
     td.colSpan = 4;
     td.className = 'breakdown-empty';
-    td.textContent = 'Keine Clients konfiguriert';
+    td.textContent = EMPTY_TEXT;
     return;
   }
 
@@ -362,7 +364,7 @@ function renderBreakdown(tab, result) {
   const tr = foot.insertRow();
   const th = document.createElement('th');
   th.scope = 'row';
-  th.textContent = 'Gesamt';
+  th.textContent = 'Total';
   tr.append(th);
   tr.insertCell().textContent = formatNumber(result.clients, 0);
   tr.insertCell();
@@ -373,25 +375,25 @@ function renderWired() {
   const data = state.wired;
   const r = calcWired(data);
   const empty = r.clients === 0;
-  const concurrencyText = `${data.concurrency}${NBSP}%`;
+  const concurrencyText = `${data.concurrency}%`;
 
   $('wired-concurrency-value').textContent = concurrencyText;
-  $('wired-effective-label').textContent = `Effektive Uplink-Last (bei ${data.concurrency} % Gleichzeitigkeit)`;
+  $('wired-effective-label').textContent = `Effective uplink load (at ${data.concurrency}% concurrency)`;
 
   const uplink = r.uplink;
   const hasUplink = !empty && uplink.gbps !== null;
   setReading($('wired-uplink'), hasUplink ? formatRate(uplink.gbps * 1000) : null);
   setBadge(
     $('wired-uplink-badge'),
-    hasUplink ? `Auslastung ${formatPercent(uplink.utilization)}` : '',
+    hasUplink ? `Utilization ${formatPercent(uplink.utilization)}` : '',
     hasUplink ? utilizationZone(uplink.utilization) : '',
   );
   setScale($('wired-uplink-scale'), hasUplink ? uplink.utilization : (empty ? null : 2));
 
   const note = $('wired-uplink-note');
-  if (empty) setNote(note, 'Keine Clients konfiguriert', 'neutral');
-  else if (uplink.gbps === null) setNote(note, 'Bedarf übersteigt 100 Gbit/s – Segmentierung erforderlich', 'crit');
-  else if (uplink.lowReserve) setNote(note, 'Geringe Reserve – ggf. nächste Portklasse wählen.', 'warn');
+  if (empty) setNote(note, EMPTY_TEXT, 'neutral');
+  else if (uplink.gbps === null) setNote(note, 'Demand exceeds 100 Gbit/s – split the network into segments.', 'crit');
+  else if (uplink.lowReserve) setNote(note, 'Low headroom – consider the next uplink class.', 'warn');
   else setNote(note, '');
 
   setReading($('wired-peak'), empty ? null : formatRate(r.peak));
@@ -399,8 +401,8 @@ function renderWired() {
 
   setReading($('wired-access'), empty ? null : accessPortText(r.accessPort));
   $('wired-access-note').textContent = empty ? '' : r.accessPort.gbps === 1
-    ? '1 Gbit/s genügt für Standard-Clients'
-    : `Höchster Einzelbedarf: ${formatRateText(r.maxPerClient)}`;
+    ? '1 Gbit/s is enough for standard clients'
+    : `Highest single-client demand: ${formatRateText(r.maxPerClient)}`;
 
   setReading($('wired-ports'), empty ? null : { num: formatNumber(r.clients, 0) });
   $('wired-switch').textContent = empty ? '' : switchText(r.switchSize);
@@ -420,10 +422,10 @@ function renderWlan() {
   const r = calcWlan(data);
   const empty = r.clients === 0;
 
-  setReading($('wlan-utilization'), empty ? null : { num: formatPercent(r.utilization).replace(`${NBSP}%`, ''), unit: '%' });
+  setReading($('wlan-utilization'), empty ? null : { num: formatPercent(r.utilization).slice(0, -1), unit: '%' });
   setBadge($('wlan-verdict'), empty ? '' : VERDICT_TEXT[r.verdict], empty ? '' : r.verdict);
   setScale($('wlan-scale'), empty ? null : r.utilization);
-  setNote($('wlan-note'), empty ? 'Keine Clients konfiguriert' : '', 'neutral');
+  setNote($('wlan-note'), empty ? EMPTY_TEXT : '', 'neutral');
 
   setReading($('wlan-aps'), empty ? null : { num: formatNumber(r.aps, 0) });
   setReading($('wlan-demand'), empty ? null : formatRate(r.demand));
@@ -434,10 +436,10 @@ function renderWlan() {
   const help = $('wlan-capacity-help');
   if (r.capacityFallback) {
     capacityInput.setAttribute('aria-invalid', 'true');
-    help.textContent = `Wert muss größer als 0 sein – es wird der Planungswert von ${formatRateText(r.plannedCapacity)} verwendet.`;
+    help.textContent = `Enter a value greater than 0. Using the planning value of ${formatRateText(r.plannedCapacity)} until then.`;
   } else {
     capacityInput.removeAttribute('aria-invalid');
-    help.textContent = `Planungswert für dieses Profil: ${formatRateText(r.plannedCapacity)}`;
+    help.textContent = `Planning value for this profile: ${formatRateText(r.plannedCapacity)}`;
   }
   help.classList.toggle('is-error', r.capacityFallback);
 
