@@ -170,16 +170,26 @@ Default mix (10 × 2 + 5 × 25), concurrency 25 %:
 - Footer hint: „Alle Werte sind Schätzwerte für die Planung und ersetzen keine
   Messung."
 
-### Styling
+### Styling / visual identity
 
-- Light theme, system font stack, `max-width: 1100px` centered.
-- CSS custom properties. Accent `#2563eb`; success `#16a34a`; warn `#d97706`;
-  error `#dc2626`; border `#e5e7eb`; page background `#f8fafc`.
-- Cards: white, 1px border, 12 px radius, subtle shadow. Big numbers
-  ~1.8rem/700.
-- Utilization bars: 8–10 px tall, track `#e5e7eb`, fill colored by verdict
-  thresholds (60/85 %).
-- Tab pills and buttons in accent color; hover states.
+The visual identity is owned by the frontend implementation lead working with
+Anthropic's frontend-design skill guidance. Design for the real subject: a
+professional daily tool for network engineers, often opened live in customer
+conversations to justify sizing decisions — precise, calm, trustworthy, with
+the key numbers as clear visual anchors.
+
+Binding quality floor (everything else is the designer's intentional choice):
+
+- No external requests of any kind (no webfonts, no CDN): deliberate system
+  font stacks; `font-variant-numeric: tabular-nums` for aligned numeric output.
+- Status semantics green (OK) / amber (borderline) / red (overloaded),
+  harmonized with the chosen palette, never hue-alone (always combined with
+  text labels).
+- Utilization bars with the 60/85 % thresholds from the formulas.
+- Responsive single column < 960 px; visible keyboard focus states;
+  `prefers-reduced-motion` respected; body text contrast at least WCAG AA.
+- Content column `max-width` ~1100 px centered, line lengths < 80 chars.
+- Big result numbers as visual anchors (~1.8rem+ / 700 weight).
 - Number formatting: German (`Intl.NumberFormat('de-DE')`), units „Mbit/s",
   „Gbit/s" (use Gbit/s when value ≥ 1000), percentages with one decimal and a
   space: „36,7 %".
