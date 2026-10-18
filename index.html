@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Netzwerk-Bandbreitenrechner</title>
+  <meta name="description" content="Bandbreitenbedarf für Switch-Ports, Uplinks und WLAN abschätzen">
+  <link rel="icon" href="assets/icon.svg">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="page">
+    <header class="masthead">
+      <div class="brand">
+        <h1>Netzwerk-Bandbreitenrechner</h1>
+        <p class="subtitle">Bandbreitenbedarf für Switch-Ports, Uplinks und WLAN abschätzen</p>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Rechner">
+        <button class="tab" type="button" role="tab" id="tab-wired" aria-controls="panel-wired" aria-selected="true">Switch / Kabel</button>
+        <button class="tab" type="button" role="tab" id="tab-wlan" aria-controls="panel-wlan" aria-selected="false" tabindex="-1">WLAN</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Switch / wired -->
+      <section class="panel" id="panel-wired" role="tabpanel" aria-labelledby="tab-wired">
+        <div class="inputs">
+          <section class="mix" id="wired-mix" aria-labelledby="wired-mix-title">
+            <h2 class="block-title" id="wired-mix-title">Client-Mix</h2>
+            <div class="mix-head" aria-hidden="true">
+              <span>Client-Typ</span><span>Anzahl</span><span>Mbit/s pro Client</span>
+            </div>
+            <ul class="mix-rows"></ul>
+            <button class="button add-row" type="button">+ Client-Typ hinzufügen</button>
+          </section>
+
+          <div class="field concurrency">
+            <div class="concurrency-head">
+              <label for="wired-concurrency">Gleichzeitigkeit (statistisch)</label>
+              <output class="concurrency-value" id="wired-concurrency-value" for="wired-concurrency">25 %</output>
+            </div>
+            <input type="range" id="wired-concurrency" min="10" max="100" step="5" value="25" aria-describedby="wired-concurrency-help">
+            <p class="help" id="wired-concurrency-help">Nicht alle Clients sind gleichzeitig aktiv. Typisch für Büronetze: 20–30 %.</p>
+          </div>
+
+          <details class="assumptions">
+            <summary>Annahmen &amp; Hinweise</summary>
+            <p>Die Spitzenlast ist die Summe aus Anzahl × Bandbreite aller Clients; multipliziert mit der Gleichzeitigkeit ergibt sie die effektive Uplink-Last. Uplink und Switch-Größe werden auf die nächste übliche Klasse aufgerundet, die Switch-Größe mit 20 % Reserve. Alle Vorgabewerte sind editierbar und bewusst konservative Planungswerte.</p>
+          </details>
+
+          <button class="button reset" type="button" data-reset="wired">Zurücksetzen</button>
+        </div>
+
+        <div class="plate">
+          <div class="primary" aria-live="polite">
+            <h2 class="reading-label">Empfohlener Uplink</h2>
+            <div class="primary-line">
+              <p class="reading reading--hero" id="wired-uplink">—</p>
+              <span class="badge" id="wired-uplink-badge" hidden></span>
+            </div>
+            <div class="scale scale--hero" id="wired-uplink-scale" aria-hidden="true">
+              <div class="scale-track"><div class="scale-fill"></div></div>
+              <div class="scale-marks">
+                <span class="mark" style="--at: 60%">60 %</span>
+                <span class="mark" style="--at: 85%">85 %</span>
+              </div>
+            </div>
+            <p class="status-note" id="wired-uplink-note" hidden></p>
+          </div>
+
+          <dl class="readings">
+            <div class="reading-cell">
+              <dt>Spitzenlast (alle gleichzeitig)</dt>
+              <dd class="reading" id="wired-peak">—</dd>
+            </div>
+            <div class="reading-cell">
+              <dt id="wired-effective-label">Effektive Uplink-Last (bei 25 % Gleichzeitigkeit)</dt>
+              <dd class="reading" id="wired-effective">—</dd>
+            </div>
+            <div class="reading-cell">
+              <dt>Access-Port-Geschwindigkeit</dt>
+              <dd class="reading" id="wired-access">—</dd>
+              <dd class="reading-note" id="wired-access-note"></dd>
+            </div>
+            <div class="reading-cell">
+              <dt>Benötigte Anschlüsse</dt>
+              <dd class="reading" id="wired-ports">—</dd>
+              <dd class="reading-note" id="wired-switch"></dd>
+            </div>
+          </dl>
+
+          <section class="compare" aria-labelledby="wired-compare-title">
+            <h3 class="sub-title" id="wired-compare-title">Auslastung je Uplink-Klasse</h3>
+            <ul class="compare-list" id="wired-compare"></ul>
+          </section>
+
+          <table class="breakdown">
+            <caption>Aufschlüsselung nach Client-Typ</caption>
+            <thead>
+              <tr><th scope="col">Client-Typ</th><th scope="col">Anzahl</th><th scope="col">Mbit/s</th><th scope="col">Summe</th></tr>
+            </thead>
+            <tbody id="wired-breakdown"></tbody>
+            <tfoot id="wired-breakdown-total"></tfoot>
+          </table>
+        </div>
+      </section>
+
+      <!-- WLAN -->
+      <section class="panel" id="panel-wlan" role="tabpanel" aria-labelledby="tab-wlan" hidden>
+        <div class="inputs">
+          <section class="mix" id="wlan-mix" aria-labelledby="wlan-mix-title">
+            <h2 class="block-title" id="wlan-mix-title">Client-Mix</h2>
+            <div class="mix-head" aria-hidden="true">
+              <span>Client-Typ</span><span>Anzahl</span><span>Mbit/s pro Client</span>
+            </div>
+            <ul class="mix-rows"></ul>
+            <button class="button add-row" type="button">+ Client-Typ hinzufügen</button>
+          </section>
+
+          <div class="radio-fields">
+            <div class="field">
+              <label for="wlan-profile">AP-Profil</label>
+              <select id="wlan-profile"></select>
+            </div>
+            <div class="field">
+              <label for="wlan-width">Kanalbreite</label>
+              <select id="wlan-width"></select>
+            </div>
+            <div class="field field--wide">
+              <label for="wlan-capacity">Kapazität pro AP-Radio (Mbit/s)</label>
+              <input class="number" type="number" id="wlan-capacity" min="0" step="1" inputmode="decimal" aria-describedby="wlan-capacity-help">
+              <p class="help" id="wlan-capacity-help"></p>
+            </div>
+          </div>
+
+          <details class="assumptions">
+            <summary>Annahmen &amp; Hinweise</summary>
+            <p>Der Gesamtbedarf aller Clients wird mit der Planungskapazität eines AP-Radios verglichen, die bei etwa 40–45 % der PHY-Datenrate liegt. Bis 60 % Auslastung gilt ein AP als ausreichend, über 85 % als überlastet; die AP-Empfehlung plant mit höchstens 60 % pro AP. Alle Vorgabewerte sind editierbar und bewusst konservative Planungswerte.</p>
+          </details>
+
+          <button class="button reset" type="button" data-reset="wlan">Zurücksetzen</button>
+        </div>
+
+        <div class="plate">
+          <div class="primary primary--split" aria-live="polite">
+            <div class="primary-main">
+              <h2 class="reading-label">Auslastung</h2>
+              <p class="reading reading--hero" id="wlan-utilization">—</p>
+            </div>
+            <div class="primary-side">
+              <h2 class="reading-label">Empfohlene APs</h2>
+              <p class="reading reading--hero" id="wlan-aps">—</p>
+              <p class="reading-note">Empfohlene APs für diesen Mix (max. 60 % Auslastung pro AP)</p>
+            </div>
+            <div class="scale scale--hero" id="wlan-scale" aria-hidden="true">
+              <div class="scale-track"><div class="scale-fill"></div></div>
+              <div class="scale-marks">
+                <span class="mark" style="--at: 60%">60 %</span>
+                <span class="mark" style="--at: 85%">85 %</span>
+              </div>
+            </div>
+            <p class="badge badge--verdict" id="wlan-verdict" hidden></p>
+            <p class="status-note" id="wlan-note" hidden></p>
+          </div>
+
+          <dl class="readings readings--three">
+            <div class="reading-cell">
+              <dt>Gesamtbedarf</dt>
+              <dd class="reading" id="wlan-demand">—</dd>
+            </div>
+            <div class="reading-cell">
+              <dt>AP-Kapazität (Planungswert)</dt>
+              <dd class="reading" id="wlan-capacity-out">—</dd>
+            </div>
+            <div class="reading-cell">
+              <dt>Ø Bandbreite pro Client</dt>
+              <dd class="reading" id="wlan-per-client">—</dd>
+            </div>
+          </dl>
+
+          <p class="plate-note">Kapazität gilt pro Radio. Ein Dual-Band-AP (2,4 + 5/6 GHz) bietet zusätzlich die Kapazität des zweiten Radios.</p>
+
+          <table class="breakdown">
+            <caption>Aufschlüsselung nach Client-Typ</caption>
+            <thead>
+              <tr><th scope="col">Client-Typ</th><th scope="col">Anzahl</th><th scope="col">Mbit/s</th><th scope="col">Summe</th></tr>
+            </thead>
+            <tbody id="wlan-breakdown"></tbody>
+            <tfoot id="wlan-breakdown-total"></tfoot>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Alle Werte sind Schätzwerte für die Planung und ersetzen keine Messung.</p>
+    </footer>
+  </div>
+
+  <template id="mix-row-template">
+    <li class="mix-row">
+      <label class="cell cell--type">
+        <span class="cell-label">Client-Typ</span>
+        <select name="type"></select>
+      </label>
+      <label class="cell">
+        <span class="cell-label">Anzahl</span>
+        <input class="number" type="number" name="count" min="0" step="1" inputmode="numeric">
+      </label>
+      <label class="cell">
+        <span class="cell-label">Mbit/s pro Client</span>
+        <input class="number" type="number" name="mbps" min="0" step="0.1" inputmode="decimal">
+      </label>
+      <button class="remove-row" type="button" aria-label="Zeile entfernen">✕</button>
+    </li>
+  </template>
+</body>
+</html>
