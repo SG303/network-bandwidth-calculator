@@ -21,6 +21,19 @@ client mix. Purpose: quick, defensible numbers for customer consulting.
 - No persistence server; only `localStorage` for the last inputs.
 - No per-client PHY/airtime simulation. Simple, transparent, editable model.
 
+## Backlog
+
+Agreed with the user, not implemented yet:
+
+- **Export / report** — hand the current inputs and results to the customer.
+  Preferred shape: a print/PDF report (a "Report" button plus a `@media print`
+  stylesheet and `window.print()` — no dependency, works offline), both tabs in
+  one document, optionally with customer / project / prepared-by fields and the
+  assumptions text. A CSV export of the entered values and results is a possible
+  companion. A generated `.pdf` via a vendored library was considered and
+  deprioritized (payload weight, weaker layout than the browser's own PDF
+  output).
+
 ## Files
 
 - `index.html` — structure (both tabs, shared client-mix component)
@@ -108,6 +121,8 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
   - `6g-6e`: "6 GHz – Wi-Fi 6E" — widths 20/40/80/160
   - `6g-be`: "6 GHz – Wi-Fi 7 (802.11be)" — widths 20/40/80/160/320
 - Dropdown "Channel width" (MHz), filtered by profile, **default 80**.
+- Slider "Concurrency (statistical)" 10–100%, step 5, **default 25%** — same
+  control and helper text as the wired tab.
 - Number field "Capacity per AP radio (Mbit/s)" — auto-filled from the matrix
   below when profile/width changes, but editable (override). Default width 80.
   Helper text: "Planning value for this profile: …".
@@ -124,20 +139,22 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
 
 ### Formulas
 
-- Demand `D = Σ count_i × mbps_i` (Mbit/s), client count `N = Σ count_i`
+- Peak demand `D = Σ count_i × mbps_i` (Mbit/s), client count `N = Σ count_i`
+- Effective load `E = D × concurrency` (Mbit/s)
 - Capacity `C` = matrix value or user override
-- Utilization `U = D / C`
+- Utilization `U = E / C`
 - Verdict: `U ≤ 0.60` → "OK – headroom available" (green);
   `0.60 < U ≤ 0.85` → "Borderline – tight during load peaks" (amber);
   `U > 0.85` → "Overloaded – add APs, widen the channel or change the
   profile" (red)
-- Recommended APs `= max(1, ceil(D / (0.6 × C)))` — "Recommended APs for
+- Recommended APs `= max(1, ceil(E / (0.6 × C)))` — "Recommended APs for
   this mix (max. 60% utilization per AP)"
 - Average per client `= C / N` (Mbit/s) — "Avg. bandwidth per client"
 
 ### Outputs (result cards + breakdown table)
 
-- "Total demand" = D
+- "Peak demand (all at once)" = D
+- "Effective demand (at X% concurrency)" = E
 - "AP capacity (planning value)" = C
 - "Utilization" with colored CSS bar and % (cap bar fill at 100% width,
   keep the real number as text, e.g. "1500%")
@@ -148,10 +165,12 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
 
 ### Acceptance examples (must match exactly)
 
-1. Default mix (20 × 2 + 5 × 25) on 5g-ax @ 80 MHz:
-   D = 165 Mbit/s, C = 450, U = 36.7% → OK; APs = 1; avg. per client = 18 Mbit/s.
-2. 30 × stream-4k on 2g @ 20 MHz:
-   D = 750, C = 50, U = 1500% → Overloaded; APs = 25.
+1. Default mix (20 × 2 + 5 × 25) on 5g-ax @ 80 MHz, concurrency 25%:
+   D = 165 Mbit/s, E = 41.25 Mbit/s, C = 450, U = 9.2% → OK; APs = 1;
+   avg. per client = 18 Mbit/s.
+2. 30 × stream-4k on 2g @ 20 MHz, concurrency 25%:
+   D = 750 Mbit/s, E = 187.5 Mbit/s, C = 50, U = 375% → Overloaded; APs = 7.
+   (At concurrency 100% the same mix gives U = 1500% and APs = 25.)
 
 ## UI / UX
 

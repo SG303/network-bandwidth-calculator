@@ -608,10 +608,6 @@ input[type="range"] {
   margin: -0.75rem 0 0;
 }
 
-.readings--three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
 /* Subgrid keeps labels, values and notes on shared lines across a row. */
 .reading-cell {
   grid-row: span 3;
@@ -636,10 +632,6 @@ input[type="range"] {
   font-size: 0.875rem;
   color: var(--muted);
   line-height: 1.4;
-}
-
-.readings--three .reading {
-  font-size: 1.875rem;
 }
 
 /* Uplink comparison */
@@ -857,8 +849,7 @@ input[type="range"] {
     border-top: 1px solid var(--hairline-soft);
   }
 
-  .readings,
-  .readings--three {
+  .readings {
     grid-template-columns: minmax(0, 1fr);
   }
 

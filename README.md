@@ -30,12 +30,14 @@ defaults.
   class. The access port speed follows the largest single-client demand
   (1 Gbit/s baseline). Switch size = smallest of 8 / 12 / 24 / 28 / 48 / 52
   ports with 20% reserve.
-- **WLAN**: demand is compared with the planning capacity of one AP radio,
-  taken from a matrix per band/standard and channel width (conservative
-  goodput, about 40–45% of the PHY rate) and editable as an override.
+- **WLAN**: effective load = peak demand × concurrency (same slider and
+  default 25% as the wired tab). That load is compared with the planning
+  capacity of one AP radio, taken from a matrix per band/standard and channel
+  width (conservative goodput, about 40–45% of the PHY rate) and editable as an
+  override.
 - **Verdict thresholds**: utilization ≤ 60% is OK, 60–85% borderline,
-  above 85% overloaded. Recommended APs = ⌈demand / (60% × capacity)⌉, at
-  least 1.
+  above 85% overloaded. Recommended APs = ⌈effective demand /
+  (60% × capacity)⌉, at least 1.
 
 ## Disclaimer
 
