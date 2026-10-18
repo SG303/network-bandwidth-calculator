@@ -448,7 +448,7 @@ function renderWlan() {
     help.textContent = `Enter a value greater than 0. Using the planning value of ${formatRateText(r.plannedCapacity)} until then.`;
   } else {
     capacityInput.removeAttribute('aria-invalid');
-    help.textContent = `Planning value for this profile: ${formatRateText(r.plannedCapacity)}`;
+    help.textContent = `Planning value for this profile: ${formatRateText(r.plannedCapacity)}. Usable throughput per radio — not the PHY data rate.`;
   }
   help.classList.toggle('is-error', r.capacityFallback);
 

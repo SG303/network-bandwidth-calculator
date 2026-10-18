@@ -123,11 +123,18 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
 - Dropdown "Channel width" (MHz), filtered by profile, **default 80**.
 - Slider "Concurrency (statistical)" 10–100%, step 5, **default 25%** — same
   control and helper text as the wired tab.
-- Number field "Capacity per AP radio (Mbit/s)" — auto-filled from the matrix
-  below when profile/width changes, but editable (override). Default width 80.
-  Helper text: "Planning value for this profile: …".
+- Number field "Capacity per AP radio (planning goodput, Mbit/s)" — auto-filled
+  from the matrix below when profile/width changes, but editable (override).
+  Default width 80. Helper text: "Planning value for this profile: …
+  Usable throughput per radio — not the PHY data rate."
 
-### Capacity matrix (planning goodput per AP radio, conservative ~40–45% of PHY)
+### Capacity matrix (planning goodput per AP radio)
+
+The values are the throughput a radio actually carries for its clients (all
+clients on it share this pool): usable aggregate goodput, deliberately
+conservative, roughly a third to half of the PHY data rate of a typical 2×2
+radio — **not** the data rate printed on the datasheet. 2.4 GHz is kept
+especially conservative because of interference and legacy clients.
 
 | Profile | 20 MHz | 40 MHz | 80 MHz | 160 MHz | 320 MHz |
 |---------|--------|--------|--------|---------|---------|
@@ -141,7 +148,7 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
 
 - Peak demand `D = Σ count_i × mbps_i` (Mbit/s), client count `N = Σ count_i`
 - Effective load `E = D × concurrency` (Mbit/s)
-- Capacity `C` = matrix value or user override
+- Capacity `C` = matrix value or user override (planning goodput, Mbit/s)
 - Utilization `U = E / C`
 - Verdict: `U ≤ 0.60` → "OK – headroom available" (green);
   `0.60 < U ≤ 0.85` → "Borderline – tight during load peaks" (amber);
@@ -155,7 +162,7 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
 
 - "Peak demand (all at once)" = D
 - "Effective demand (at X% concurrency)" = E
-- "AP capacity (planning value)" = C
+- "AP capacity (planning goodput)" = C
 - "Utilization" with colored CSS bar and % (cap bar fill at 100% width,
   keep the real number as text, e.g. "1500%")
 - Verdict badge
