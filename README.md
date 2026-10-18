@@ -2,6 +2,8 @@
 
 # Network Bandwidth Calculator
 
+**Live:** <https://sg303.github.io/network-bandwidth-calculator/>
+
 Created in [T3 Code](https://t3.codes).
 
 A small, dependency-free web tool for network engineers (UI in German). Enter a
