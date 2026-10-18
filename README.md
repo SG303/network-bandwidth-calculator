@@ -32,9 +32,10 @@ defaults.
   ports with 20% reserve.
 - **WLAN**: effective load = peak demand × concurrency (same slider and
   default 25% as the wired tab). That load is compared with the planning
-  capacity of one AP radio, taken from a matrix per band/standard and channel
-  width (conservative goodput, about 40–45% of the PHY rate) and editable as an
-  override.
+  goodput of one AP radio: the throughput it really carries for all of its
+  clients (in practice roughly a third to half of the PHY data rate — not the
+  datasheet value), taken from a matrix per band/standard and channel width and
+  editable as an override.
 - **Verdict thresholds**: utilization ≤ 60% is OK, 60–85% borderline,
   above 85% overloaded. Recommended APs = ⌈effective demand /
   (60% × capacity)⌉, at least 1.
