@@ -118,6 +118,15 @@
             <button class="button add-row" type="button">+ Add client type</button>
           </section>
 
+          <div class="field concurrency">
+            <div class="concurrency-head">
+              <label for="wlan-concurrency">Concurrency (statistical)</label>
+              <output class="concurrency-value" id="wlan-concurrency-value" for="wlan-concurrency">25%</output>
+            </div>
+            <input type="range" id="wlan-concurrency" min="10" max="100" step="5" value="25" aria-describedby="wlan-concurrency-help">
+            <p class="help" id="wlan-concurrency-help">Not all clients are active at the same time. Typical for office networks: 20–30%.</p>
+          </div>
+
           <div class="radio-fields">
             <div class="field">
               <label for="wlan-profile">AP profile</label>
@@ -136,7 +145,7 @@
 
           <details class="assumptions">
             <summary>Assumptions &amp; notes</summary>
-            <p>Total client demand is compared with the planning capacity of one AP radio, about 40–45% of the PHY data rate. Up to 60% utilization one AP is enough; above 85% it is overloaded. The AP recommendation plans for at most 60% per AP. All defaults are editable and deliberately conservative planning values.</p>
+            <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective load on one AP radio. That load is compared with the planning capacity, about 40–45% of the PHY data rate. Up to 60% utilization one AP is enough; above 85% it is overloaded. The AP recommendation plans for at most 60% per AP. All defaults are editable and deliberately conservative planning values.</p>
           </details>
 
           <button class="button reset" type="button" data-reset="wlan">Reset</button>
@@ -164,10 +173,14 @@
             <p class="status-note" id="wlan-note" hidden></p>
           </div>
 
-          <dl class="readings readings--three">
+          <dl class="readings">
             <div class="reading-cell">
-              <dt>Total demand</dt>
-              <dd class="reading" id="wlan-demand">—</dd>
+              <dt>Peak demand (all at once)</dt>
+              <dd class="reading" id="wlan-peak">—</dd>
+            </div>
+            <div class="reading-cell">
+              <dt id="wlan-effective-label">Effective demand (at 25% concurrency)</dt>
+              <dd class="reading" id="wlan-effective">—</dd>
             </div>
             <div class="reading-cell">
               <dt>AP capacity (planning value)</dt>

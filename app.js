@@ -50,6 +50,7 @@ const DEFAULTS = {
     profile: '5g-ax',
     width: 80,
     capacity: 450,
+    concurrency: 25,
   },
 };
 
@@ -147,20 +148,23 @@ function plannedCapacity(profile, width) {
   return profileData.capacity[width] || DEFAULTS.wlan.capacity;
 }
 
-function calcWlan({ rows, profile, width, capacity }) {
+function calcWlan({ rows, profile, width, capacity, concurrency }) {
   const mix = summarizeMix(rows);
   const planned = plannedCapacity(profile, width);
   const override = toNumber(capacity);
   const effectiveCapacity = override > 0 ? override : planned;
-  const utilization = clean(mix.demand / effectiveCapacity);
+  const effective = clean((mix.demand * clampConcurrency(concurrency)) / 100);
+  const utilization = clean(effective / effectiveCapacity);
   return {
     ...mix,
+    peak: mix.demand,
+    effective,
     plannedCapacity: planned,
     capacity: effectiveCapacity,
     capacityFallback: override === 0,
     utilization,
     verdict: utilizationZone(utilization),
-    aps: Math.max(1, Math.ceil(clean(mix.demand / (OK_LIMIT * effectiveCapacity)))),
+    aps: Math.max(1, Math.ceil(clean(effective / (OK_LIMIT * effectiveCapacity)))),
     perClient: mix.clients > 0 ? clean(effectiveCapacity / mix.clients) : null,
   };
 }
@@ -247,13 +251,14 @@ function sanitizeState(tab, data) {
   if (tab === 'wired') return { rows, concurrency: clampConcurrency(data.concurrency) };
 
   // Corrupt profile: the stored width and capacity cannot be trusted either,
-  // so restore the whole radio trio to the documented defaults.
+  // so restore the whole radio configuration to the documented defaults.
   if (!AP_PROFILES[data.profile]) {
     return {
       rows,
       profile: DEFAULTS.wlan.profile,
       width: DEFAULTS.wlan.width,
       capacity: DEFAULTS.wlan.capacity,
+      concurrency: clampConcurrency(data.concurrency),
     };
   }
   const profile = data.profile;
@@ -265,7 +270,7 @@ function sanitizeState(tab, data) {
   const capacity = widthValid && Number.isFinite(data.capacity)
     ? data.capacity
     : plannedCapacity(profile, width);
-  return { rows, profile, width, capacity };
+  return { rows, profile, width, capacity, concurrency: clampConcurrency(data.concurrency) };
 }
 
 function loadState(tab) {
@@ -422,13 +427,17 @@ function renderWlan() {
   const r = calcWlan(data);
   const empty = r.clients === 0;
 
+  $('wlan-concurrency-value').textContent = `${data.concurrency}%`;
+  $('wlan-effective-label').textContent = `Effective demand (at ${data.concurrency}% concurrency)`;
+
   setReading($('wlan-utilization'), empty ? null : { num: formatPercent(r.utilization).slice(0, -1), unit: '%' });
   setBadge($('wlan-verdict'), empty ? '' : VERDICT_TEXT[r.verdict], empty ? '' : r.verdict);
   setScale($('wlan-scale'), empty ? null : r.utilization);
   setNote($('wlan-note'), empty ? EMPTY_TEXT : '', 'neutral');
 
   setReading($('wlan-aps'), empty ? null : { num: formatNumber(r.aps, 0) });
-  setReading($('wlan-demand'), empty ? null : formatRate(r.demand));
+  setReading($('wlan-peak'), empty ? null : formatRate(r.peak));
+  setReading($('wlan-effective'), empty ? null : formatRate(r.effective));
   setReading($('wlan-capacity-out'), formatRate(r.capacity));
   setReading($('wlan-per-client'), empty ? null : formatRate(r.perClient));
 
@@ -555,6 +564,7 @@ function syncWlanInputs() {
   $('wlan-profile').value = state.wlan.profile;
   fillWidthOptions();
   $('wlan-capacity').value = state.wlan.capacity;
+  $('wlan-concurrency').value = state.wlan.concurrency;
 }
 
 function setupWlan() {
@@ -581,6 +591,11 @@ function setupWlan() {
   $('wlan-capacity').addEventListener('input', (event) => {
     const value = event.target.value.trim();
     state.wlan.capacity = value === '' ? 0 : Number(value.replace(',', '.')) || 0;
+    update('wlan');
+  });
+
+  $('wlan-concurrency').addEventListener('input', (event) => {
+    state.wlan.concurrency = clampConcurrency(event.target.value);
     update('wlan');
   });
 }
@@ -667,6 +682,7 @@ if (typeof module !== 'undefined' && module.exports) {
     accessPortClass,
     recommendUplink,
     recommendSwitch,
+    clampConcurrency,
     calcWired,
     calcWlan,
     plannedCapacity,
