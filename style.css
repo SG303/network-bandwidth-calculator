@@ -1,7 +1,7 @@
-/* Netzwerk-Bandbreitenrechner
+/* Network Bandwidth Calculator
  * Identity: a measuring instrument on a rack. Inputs sit on the aluminium
  * face; results are one raised front plate with DIN-style readouts and
- * a graduated scale carrying the 60 % / 85 % thresholds.
+ * a graduated scale carrying the 60% / 85% thresholds.
  */
 
 :root {
@@ -506,7 +506,7 @@ input[type="range"] {
 .status-note[data-tone="crit"] { border-color: var(--crit); color: var(--crit-ink); }
 .status-note[data-tone="neutral"] { font-weight: 500; color: var(--muted); }
 
-/* Graduated scale: zones tinted 0–60 / 60–85 / 85–100 %, 10 % ticks. */
+/* Graduated scale: zones tinted 0–60 / 60–85 / 85–100%, 10% ticks. */
 .scale {
   position: relative;
   --track: 16px;
