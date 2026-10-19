@@ -24,15 +24,19 @@ const SWITCH_SIZES = [8, 12, 24, 28, 48, 52];
 
 // Planning goodput per AP radio in Mbit/s (conservative, ~40–45% of PHY rate).
 const AP_PROFILES = {
-  '2g': { label: '2.4 GHz (Wi-Fi 4/6)', capacity: { 20: 50, 40: 100 } },
-  '5g-ac': { label: '5 GHz – Wi-Fi 5 (802.11ac)', capacity: { 20: 80, 40: 170, 80: 350 } },
-  '5g-ax': { label: '5 GHz – Wi-Fi 6 (802.11ax)', capacity: { 20: 110, 40: 220, 80: 450, 160: 900 } },
-  '6g-6e': { label: '6 GHz – Wi-Fi 6E', capacity: { 20: 110, 40: 220, 80: 450, 160: 900 } },
-  '6g-be': { label: '6 GHz – Wi-Fi 7 (802.11be)', capacity: { 20: 120, 40: 240, 80: 500, 160: 1000, 320: 1900 } },
+  '2g': { label: '2.4 GHz (Wi-Fi 4/6)', short: '2.4 GHz', capacity: { 20: 50, 40: 100 } },
+  '5g-ac': { label: '5 GHz – Wi-Fi 5 (802.11ac)', short: '5 GHz (Wi-Fi 5)', capacity: { 20: 80, 40: 170, 80: 350 } },
+  '5g-ax': { label: '5 GHz – Wi-Fi 6 (802.11ax)', short: '5 GHz (Wi-Fi 6)', capacity: { 20: 110, 40: 220, 80: 450, 160: 900 } },
+  '6g-6e': { label: '6 GHz – Wi-Fi 6E', short: '6 GHz (Wi-Fi 6E)', capacity: { 20: 110, 40: 220, 80: 450, 160: 900 } },
+  '6g-be': { label: '6 GHz – Wi-Fi 7 (802.11be)', short: '6 GHz (Wi-Fi 7)', capacity: { 20: 120, 40: 240, 80: 500, 160: 1000, 320: 1900 } },
 };
 
 const OK_LIMIT = 0.6;
 const BORDERLINE_LIMIT = 0.85;
+const MAX_RADIOS = 4;
+
+// One radio of an AP; an AP is described by a list of these.
+const DEFAULT_RADIO = { id: 'r1', profile: '5g-ax', width: 80, capacity: 450 };
 
 const DEFAULTS = {
   wired: {
@@ -44,12 +48,10 @@ const DEFAULTS = {
   },
   wlan: {
     rows: [
-      { type: 'office-light', count: 20, mbps: 2 },
-      { type: 'stream-4k', count: 5, mbps: 25 },
+      { type: 'office-light', count: 20, mbps: 2, radio: 'r1' },
+      { type: 'stream-4k', count: 5, mbps: 25, radio: 'r1' },
     ],
-    profile: '5g-ax',
-    width: 80,
-    capacity: 450,
+    radios: [DEFAULT_RADIO],
     concurrency: 25,
   },
 };
@@ -94,6 +96,8 @@ function utilizationZone(ratio) {
   if (ratio <= BORDERLINE_LIMIT) return 'warn';
   return 'crit';
 }
+
+const VERDICT_RANK = { ok: 0, warn: 1, crit: 2 };
 
 function accessPortClass(maxPerClient) {
   if (maxPerClient > 9500) return { gbps: 10, special: true };
@@ -144,18 +148,29 @@ function channelWidths(profile) {
 }
 
 function plannedCapacity(profile, width) {
-  const profileData = AP_PROFILES[profile] || AP_PROFILES[DEFAULTS.wlan.profile];
-  return profileData.capacity[width] || DEFAULTS.wlan.capacity;
+  const profileData = AP_PROFILES[profile] || AP_PROFILES[DEFAULT_RADIO.profile];
+  return profileData.capacity[width] || DEFAULT_RADIO.capacity;
 }
 
-function calcWlan({ rows, profile, width, capacity, concurrency }) {
-  const mix = summarizeMix(rows);
-  const planned = plannedCapacity(profile, width);
-  const override = toNumber(capacity);
+// Compact label for results, e.g. "5 GHz (Wi-Fi 6) @ 80 MHz".
+function radioLabel(radio) {
+  const profile = AP_PROFILES[radio.profile] || AP_PROFILES[DEFAULT_RADIO.profile];
+  return `${profile.short} @ ${radio.width} MHz`;
+}
+
+// One radio: demand of its clients, effective load and the APs it alone needs.
+function calcRadio(rows, radio, concurrency) {
+  const mix = summarizeMix(rows.filter((row) => row.radio === radio.id));
+  const planned = plannedCapacity(radio.profile, radio.width);
+  const override = toNumber(radio.capacity);
   const effectiveCapacity = override > 0 ? override : planned;
-  const effective = clean((mix.demand * clampConcurrency(concurrency)) / 100);
+  const effective = clean((mix.demand * concurrency) / 100);
   const utilization = clean(effective / effectiveCapacity);
   return {
+    id: radio.id,
+    profile: radio.profile,
+    width: radio.width,
+    label: radioLabel(radio),
     ...mix,
     peak: mix.demand,
     effective,
@@ -164,8 +179,37 @@ function calcWlan({ rows, profile, width, capacity, concurrency }) {
     capacityFallback: override === 0,
     utilization,
     verdict: utilizationZone(utilization),
-    aps: Math.max(1, Math.ceil(clean(effective / (OK_LIMIT * effectiveCapacity)))),
+    aps: mix.clients > 0 ? Math.max(1, Math.ceil(clean(effective / (OK_LIMIT * effectiveCapacity)))) : 0,
     perClient: mix.clients > 0 ? clean(effectiveCapacity / mix.clients) : null,
+  };
+}
+
+// The AP is the unit: one device carries all of its radios, so the number of
+// APs is set by the radio with the highest requirement, never by their sum.
+function calcWlan({ rows, radios, concurrency }) {
+  const conc = clampConcurrency(concurrency);
+  const list = Array.isArray(radios) && radios.length ? radios : [DEFAULT_RADIO];
+  const perRadio = list.map((radio) => calcRadio(rows, radio, conc));
+  const active = perRadio.filter((r) => r.clients > 0);
+  const limiting = active.reduce((worst, r) => (!worst || r.utilization > worst.utilization ? r : worst), null);
+  const verdict = active.reduce(
+    (worst, r) => (VERDICT_RANK[r.verdict] > VERDICT_RANK[worst] ? r.verdict : worst),
+    'ok',
+  );
+  const mix = summarizeMix(rows);
+  return {
+    ...mix,
+    peak: mix.demand,
+    effective: clean((mix.demand * conc) / 100),
+    radios: perRadio,
+    limiting: limiting ? limiting.id : null,
+    utilization: limiting ? limiting.utilization : 0,
+    verdict,
+    aps: Math.max(1, ...perRadio.map((r) => r.aps)),
+    capacity: (limiting || perRadio[0]).capacity,
+    plannedCapacity: perRadio[0].plannedCapacity,
+    capacityFallback: perRadio.some((r) => r.capacityFallback),
+    perClient: limiting ? limiting.perClient : null,
   };
 }
 
@@ -225,6 +269,8 @@ const VERDICT_TEXT = {
   crit: 'Overloaded – add APs, widen the channel or change the profile',
 };
 
+const VERDICT_SHORT = { ok: 'OK', warn: 'Borderline', crit: 'Overloaded' };
+
 /* ------------------------------------------------------------------ *
  * State & persistence
  * ------------------------------------------------------------------ */
@@ -241,7 +287,44 @@ function sanitizeRows(rows) {
       type: TYPE_BY_ID[row.type] ? row.type : 'custom',
       count: Math.floor(toNumber(row.count)),
       mbps: toNumber(row.mbps),
+      radio: typeof row.radio === 'string' && row.radio ? row.radio : undefined,
     }));
+}
+
+function sanitizeRadio(entry, index) {
+  const id = typeof entry.id === 'string' && entry.id ? entry.id : `r${index + 1}`;
+  // Corrupt profile: the stored width and capacity cannot be trusted either,
+  // so restore the whole radio configuration to the documented defaults.
+  if (!AP_PROFILES[entry.profile]) {
+    return { id, profile: DEFAULT_RADIO.profile, width: DEFAULT_RADIO.width, capacity: DEFAULT_RADIO.capacity };
+  }
+  const profile = entry.profile;
+  const widths = channelWidths(profile);
+  const widthValid = widths.includes(Number(entry.width));
+  // Invalid width falls back to the widest channel, mirroring the profile
+  // switch in the UI; a stale capacity resets to the matching matrix value.
+  const width = widthValid ? Number(entry.width) : Math.max(...widths);
+  const capacity = widthValid && Number.isFinite(entry.capacity)
+    ? entry.capacity
+    : plannedCapacity(profile, width);
+  return { id, profile, width, capacity };
+}
+
+// Older states stored one radio at the top level ({profile, width, capacity});
+// those migrate to a single-radio AP.
+function sanitizeRadios(data) {
+  const entries = Array.isArray(data.radios) && data.radios.length
+    ? data.radios.filter((x) => x && typeof x === 'object')
+    : [{ id: 'r1', profile: data.profile, width: data.width, capacity: data.capacity }];
+  const radios = [];
+  const seen = new Set();
+  entries.forEach((entry, index) => {
+    const radio = sanitizeRadio(entry, index);
+    if (seen.has(radio.id)) return; // malformed storage: drop duplicate ids
+    seen.add(radio.id);
+    radios.push(radio);
+  });
+  return radios.length ? radios : null;
 }
 
 function sanitizeState(tab, data) {
@@ -250,27 +333,12 @@ function sanitizeState(tab, data) {
   if (!rows) return null;
   if (tab === 'wired') return { rows, concurrency: clampConcurrency(data.concurrency) };
 
-  // Corrupt profile: the stored width and capacity cannot be trusted either,
-  // so restore the whole radio configuration to the documented defaults.
-  if (!AP_PROFILES[data.profile]) {
-    return {
-      rows,
-      profile: DEFAULTS.wlan.profile,
-      width: DEFAULTS.wlan.width,
-      capacity: DEFAULTS.wlan.capacity,
-      concurrency: clampConcurrency(data.concurrency),
-    };
-  }
-  const profile = data.profile;
-  const widths = channelWidths(profile);
-  const widthValid = widths.includes(Number(data.width));
-  // Invalid width falls back to the widest channel, mirroring the profile
-  // switch in the UI; a stale capacity resets to the matching matrix value.
-  const width = widthValid ? Number(data.width) : Math.max(...widths);
-  const capacity = widthValid && Number.isFinite(data.capacity)
-    ? data.capacity
-    : plannedCapacity(profile, width);
-  return { rows, profile, width, capacity, concurrency: clampConcurrency(data.concurrency) };
+  const radios = sanitizeRadios(data);
+  if (!radios) return null;
+  // Clients whose radio no longer exists move to the first radio.
+  const ids = new Set(radios.map((radio) => radio.id));
+  for (const row of rows) if (!ids.has(row.radio)) row.radio = radios[0].id;
+  return { rows, radios, concurrency: clampConcurrency(data.concurrency) };
 }
 
 function loadState(tab) {
@@ -426,6 +494,8 @@ function renderWlan() {
   const data = state.wlan;
   const r = calcWlan(data);
   const empty = r.clients === 0;
+  const single = r.radios.length === 1;
+  const limiting = r.radios.find((x) => x.id === r.limiting) || r.radios[0];
 
   $('wlan-concurrency-value').textContent = `${data.concurrency}%`;
   $('wlan-effective-label').textContent = `Effective demand (at ${data.concurrency}% concurrency)`;
@@ -433,26 +503,63 @@ function renderWlan() {
   setReading($('wlan-utilization'), empty ? null : { num: formatPercent(r.utilization).slice(0, -1), unit: '%' });
   setBadge($('wlan-verdict'), empty ? '' : VERDICT_TEXT[r.verdict], empty ? '' : r.verdict);
   setScale($('wlan-scale'), empty ? null : r.utilization);
-  setNote($('wlan-note'), empty ? EMPTY_TEXT : '', 'neutral');
+  setNote($('wlan-note'), empty ? EMPTY_TEXT : (single ? '' : `Limiting radio: ${limiting.label}`), 'neutral');
 
   setReading($('wlan-aps'), empty ? null : { num: formatNumber(r.aps, 0) });
+  $('wlan-aps-note').textContent = single
+    ? 'Recommended APs for this mix (max. 60% utilization per AP)'
+    : 'Highest requirement of a single radio (max. 60% utilization per AP)';
+
+  $('wlan-capacity-label').textContent = single ? 'AP capacity (planning goodput)' : 'Capacity, limiting radio';
+  $('wlan-per-client-label').textContent = single ? 'Avg. bandwidth per client' : 'Avg. per client, limiting radio';
   setReading($('wlan-peak'), empty ? null : formatRate(r.peak));
   setReading($('wlan-effective'), empty ? null : formatRate(r.effective));
   setReading($('wlan-capacity-out'), formatRate(r.capacity));
   setReading($('wlan-per-client'), empty ? null : formatRate(r.perClient));
 
-  const capacityInput = $('wlan-capacity');
-  const help = $('wlan-capacity-help');
-  if (r.capacityFallback) {
-    capacityInput.setAttribute('aria-invalid', 'true');
-    help.textContent = `Enter a value greater than 0. Using the planning value of ${formatRateText(r.plannedCapacity)} until then.`;
-  } else {
-    capacityInput.removeAttribute('aria-invalid');
-    help.textContent = `Planning value for this profile: ${formatRateText(r.plannedCapacity)}. Usable throughput per radio — not the PHY data rate.`;
-  }
-  help.classList.toggle('is-error', r.capacityFallback);
-
+  renderRadioTable(r);
+  renderRadioHelp(r);
   renderBreakdown('wlan', r);
+}
+
+function renderRadioTable(result) {
+  const body = $('wlan-radio-table');
+  body.replaceChildren();
+  for (const radio of result.radios) {
+    const tr = body.insertRow();
+    const th = document.createElement('th');
+    th.scope = 'row';
+    th.textContent = radio.label;
+    tr.append(th);
+    tr.insertCell().textContent = formatRateText(radio.effective);
+    tr.insertCell().textContent = formatRateText(radio.capacity);
+    const utilization = tr.insertCell();
+    utilization.append(`${formatPercent(radio.utilization)} `);
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = radio.clients > 0 ? VERDICT_SHORT[radio.verdict] : 'idle';
+    if (radio.clients > 0) badge.dataset.zone = radio.verdict;
+    utilization.append(badge);
+    tr.insertCell().textContent = radio.clients > 0 ? formatNumber(radio.aps, 0) : '—';
+  }
+}
+
+function renderRadioHelp(result) {
+  const help = $('wlan-radios-help');
+  const rows = $('wlan-radios').querySelectorAll('.mix-row');
+  result.radios.forEach((radio, i) => {
+    const input = rows[i] && rows[i].querySelector('[name="capacity"]');
+    if (!input) return;
+    if (radio.capacityFallback) input.setAttribute('aria-invalid', 'true');
+    else input.removeAttribute('aria-invalid');
+  });
+  const invalid = result.radios.find((x) => x.capacityFallback);
+  if (invalid) {
+    help.textContent = `${invalid.label}: enter a value greater than 0. Using the planning value of ${formatRateText(invalid.plannedCapacity)} until then.`;
+  } else {
+    help.textContent = 'Planning values per band, standard and width — usable throughput per radio, not the PHY data rate. Edit a value to override it.';
+  }
+  help.classList.toggle('is-error', Boolean(invalid));
 }
 
 const RENDERERS = { wired: renderWired, wlan: renderWlan };
@@ -464,7 +571,7 @@ function update(tab, persist = true) {
 
 /* Client mix (shared component) */
 
-function buildMixRow(row, index) {
+function buildMixRow(tab, row, index) {
   const li = $('mix-row-template').content.firstElementChild.cloneNode(true);
   li.dataset.index = String(index);
   const select = li.querySelector('[name="type"]');
@@ -472,12 +579,21 @@ function buildMixRow(row, index) {
   select.value = row.type;
   li.querySelector('[name="count"]').value = row.count;
   li.querySelector('[name="mbps"]').value = row.mbps;
+  const radioCell = li.querySelector('.cell--radio');
+  if (tab !== 'wlan') {
+    radioCell.remove();
+  } else {
+    const radioSelect = radioCell.querySelector('[name="radio"]');
+    radioSelect.append(...state.wlan.radios.map((x) => new Option(radioLabel(x), x.id)));
+    radioSelect.value = row.radio;
+  }
   return li;
 }
 
 function renderMix(tab) {
-  const list = $(`${tab}-mix`).querySelector('.mix-rows');
-  list.replaceChildren(...state[tab].rows.map(buildMixRow));
+  const root = $(`${tab}-mix`);
+  root.classList.toggle('mix--radios', tab === 'wlan' && state.wlan.radios.length > 1);
+  root.querySelector('.mix-rows').replaceChildren(...state[tab].rows.map((row, i) => buildMixRow(tab, row, i)));
 }
 
 function setupMix(tab) {
@@ -496,6 +612,8 @@ function setupMix(tab) {
       row.count = Math.floor(toNumber(value));
     } else if (name === 'mbps') {
       row.mbps = toNumber(value);
+    } else if (name === 'radio') {
+      row.radio = value;
     }
     update(tab);
   });
@@ -504,7 +622,9 @@ function setupMix(tab) {
     const rows = state[tab].rows;
     if (event.target.closest('.add-row')) {
       const preset = CLIENT_TYPES[0];
-      rows.push({ type: preset.id, count: 1, mbps: preset.mbps });
+      const row = { type: preset.id, count: 1, mbps: preset.mbps };
+      if (tab === 'wlan') row.radio = state.wlan.radios[0].id;
+      rows.push(row);
       renderMix(tab);
       update(tab);
       root.querySelector('.mix-row:last-child select').focus();
@@ -554,44 +674,93 @@ function setupWired() {
 
 /* WLAN tab */
 
-function fillWidthOptions() {
-  const select = $('wlan-width');
-  select.replaceChildren(...channelWidths(state.wlan.profile).map((w) => new Option(`${w} MHz`, String(w))));
-  select.value = String(state.wlan.width);
+function fillWidthSelect(select, profile, width) {
+  select.replaceChildren(...channelWidths(profile).map((w) => new Option(`${w} MHz`, String(w))));
+  select.value = String(width);
+}
+
+// Ids stay stable so client rows keep their assignment when a radio is removed.
+function newRadio(radios) {
+  let n = 1;
+  while (radios.some((radio) => radio.id === `r${n}`)) n += 1;
+  return {
+    id: `r${n}`,
+    profile: DEFAULT_RADIO.profile,
+    width: DEFAULT_RADIO.width,
+    capacity: DEFAULT_RADIO.capacity,
+  };
+}
+
+function buildRadioRow(radio, index) {
+  const li = $('radio-row-template').content.firstElementChild.cloneNode(true);
+  li.dataset.index = String(index);
+  const profileSelect = li.querySelector('[name="profile"]');
+  profileSelect.append(...Object.entries(AP_PROFILES).map(([id, p]) => new Option(p.label, id)));
+  profileSelect.value = radio.profile;
+  fillWidthSelect(li.querySelector('[name="width"]'), radio.profile, radio.width);
+  li.querySelector('[name="capacity"]').value = radio.capacity;
+  li.querySelector('.remove-row').hidden = state.wlan.radios.length === 1;
+  return li;
+}
+
+function renderRadios() {
+  const root = $('wlan-radios');
+  root.querySelector('.mix-rows').replaceChildren(...state.wlan.radios.map(buildRadioRow));
+  root.querySelector('.add-row').hidden = state.wlan.radios.length >= MAX_RADIOS;
 }
 
 function syncWlanInputs() {
-  $('wlan-profile').value = state.wlan.profile;
-  fillWidthOptions();
-  $('wlan-capacity').value = state.wlan.capacity;
-  $('wlan-concurrency').value = state.wlan.concurrency;
+  renderRadios();
 }
 
 function setupWlan() {
-  const profileSelect = $('wlan-profile');
-  profileSelect.append(...Object.entries(AP_PROFILES).map(([id, p]) => new Option(p.label, id)));
+  const root = $('wlan-radios');
 
-  profileSelect.addEventListener('input', (event) => {
-    const data = state.wlan;
-    data.profile = event.target.value;
-    const widths = channelWidths(data.profile);
-    if (!widths.includes(data.width)) data.width = Math.max(...widths);
-    data.capacity = plannedCapacity(data.profile, data.width);
-    syncWlanInputs();
+  root.addEventListener('input', (event) => {
+    const li = event.target.closest('.mix-row');
+    if (!li) return;
+    const radio = state.wlan.radios[Number(li.dataset.index)];
+    const { name, value } = event.target;
+    if (name === 'profile') {
+      radio.profile = value;
+      const widths = channelWidths(radio.profile);
+      if (!widths.includes(radio.width)) radio.width = Math.max(...widths);
+      radio.capacity = plannedCapacity(radio.profile, radio.width);
+      fillWidthSelect(li.querySelector('[name="width"]'), radio.profile, radio.width);
+      li.querySelector('[name="capacity"]').value = radio.capacity;
+    } else if (name === 'width') {
+      radio.width = Number(value);
+      radio.capacity = plannedCapacity(radio.profile, radio.width);
+      li.querySelector('[name="capacity"]').value = radio.capacity;
+    } else if (name === 'capacity') {
+      const text = value.trim();
+      radio.capacity = text === '' ? 0 : Number(text.replace(',', '.')) || 0;
+    }
+    // Profile and width change how radios are labelled in the client mix.
+    if (name !== 'capacity') renderMix('wlan');
     update('wlan');
   });
 
-  $('wlan-width').addEventListener('input', (event) => {
-    state.wlan.width = Number(event.target.value);
-    state.wlan.capacity = plannedCapacity(state.wlan.profile, state.wlan.width);
-    $('wlan-capacity').value = state.wlan.capacity;
+  root.addEventListener('click', (event) => {
+    const radios = state.wlan.radios;
+    if (event.target.closest('.add-row')) {
+      if (radios.length >= MAX_RADIOS) return;
+      radios.push(newRadio(radios));
+      renderRadios();
+      renderMix('wlan');
+      update('wlan');
+      root.querySelector('.mix-row:last-child select').focus();
+      return;
+    }
+    const removeButton = event.target.closest('.remove-row');
+    if (!removeButton || radios.length === 1) return;
+    const index = Number(removeButton.closest('.mix-row').dataset.index);
+    const [removed] = radios.splice(index, 1);
+    for (const row of state.wlan.rows) if (row.radio === removed.id) row.radio = radios[0].id;
+    renderRadios();
+    renderMix('wlan');
     update('wlan');
-  });
-
-  $('wlan-capacity').addEventListener('input', (event) => {
-    const value = event.target.value.trim();
-    state.wlan.capacity = value === '' ? 0 : Number(value.replace(',', '.')) || 0;
-    update('wlan');
+    root.querySelector('.add-row').focus();
   });
 
   $('wlan-concurrency').addEventListener('input', (event) => {
@@ -684,14 +853,19 @@ if (typeof module !== 'undefined' && module.exports) {
     recommendSwitch,
     clampConcurrency,
     calcWired,
+    calcRadio,
     calcWlan,
     plannedCapacity,
+    radioLabel,
     formatRate,
     formatRateText,
     formatPercent,
     accessPortText,
     switchText,
     sanitizeState,
+    sanitizeRadios,
+    newRadio,
     VERDICT_TEXT,
+    VERDICT_SHORT,
   };
 }

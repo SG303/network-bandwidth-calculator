@@ -112,7 +112,7 @@
           <section class="mix" id="wlan-mix" aria-labelledby="wlan-mix-title">
             <h2 class="block-title" id="wlan-mix-title">Client mix</h2>
             <div class="mix-head" aria-hidden="true">
-              <span>Client type</span><span>Count</span><span>Mbit/s per client</span>
+              <span>Client type</span><span>Count</span><span>Mbit/s per client</span><span>Radio</span>
             </div>
             <ul class="mix-rows"></ul>
             <button class="button add-row" type="button">+ Add client type</button>
@@ -127,25 +127,19 @@
             <p class="help" id="wlan-concurrency-help">Not all clients are active at the same time. Typical for office networks: 20–30%.</p>
           </div>
 
-          <div class="radio-fields">
-            <div class="field">
-              <label for="wlan-profile">AP profile</label>
-              <select id="wlan-profile"></select>
+          <section class="mix radio-list" id="wlan-radios" aria-labelledby="wlan-radios-title">
+            <h2 class="block-title" id="wlan-radios-title">AP radios</h2>
+            <div class="mix-head" aria-hidden="true">
+              <span>Radio</span><span>Channel width</span><span>Goodput (Mbit/s)</span>
             </div>
-            <div class="field">
-              <label for="wlan-width">Channel width</label>
-              <select id="wlan-width"></select>
-            </div>
-            <div class="field field--wide">
-              <label for="wlan-capacity">Capacity per AP radio (planning goodput, Mbit/s)</label>
-              <input class="number" type="number" id="wlan-capacity" min="0" step="1" inputmode="decimal" aria-describedby="wlan-capacity-help">
-              <p class="help" id="wlan-capacity-help"></p>
-            </div>
-          </div>
+            <ul class="mix-rows"></ul>
+            <button class="button add-row" type="button">+ Add radio</button>
+            <p class="help" id="wlan-radios-help"></p>
+          </section>
 
           <details class="assumptions">
             <summary>Assumptions &amp; notes</summary>
-            <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective load on one AP radio. That load is compared with the planning goodput of one radio — the throughput it actually carries, in practice roughly a third to half of its PHY data rate, and deliberately conservative on 2.4 GHz. It is not the data rate from the datasheet. Up to 60% utilization one AP is enough; above 85% it is overloaded. The AP recommendation plans for at most 60% per AP. All defaults are editable and deliberately conservative planning values.</p>
+            <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective load on a radio. That load is compared with the planning goodput of this radio — the throughput it actually carries, in practice roughly a third to half of its PHY data rate, and deliberately conservative on 2.4 GHz. It is not the data rate from the datasheet. Up to 60% utilization one AP is enough; above 85% it is overloaded. One AP carries all of its radios, so the recommendation is set by the radio with the highest requirement. All defaults are editable and deliberately conservative planning values.</p>
           </details>
 
           <button class="button reset" type="button" data-reset="wlan">Reset</button>
@@ -160,7 +154,7 @@
             <div class="primary-side">
               <h2 class="reading-label">Recommended APs</h2>
               <p class="reading reading--hero" id="wlan-aps">—</p>
-              <p class="reading-note">Recommended APs for this mix (max. 60% utilization per AP)</p>
+              <p class="reading-note" id="wlan-aps-note">Recommended APs for this mix (max. 60% utilization per AP)</p>
             </div>
             <div class="scale scale--hero" id="wlan-scale" aria-hidden="true">
               <div class="scale-track"><div class="scale-fill"></div></div>
@@ -183,16 +177,24 @@
               <dd class="reading" id="wlan-effective">—</dd>
             </div>
             <div class="reading-cell">
-              <dt>AP capacity (planning goodput)</dt>
+              <dt id="wlan-capacity-label">AP capacity (planning goodput)</dt>
               <dd class="reading" id="wlan-capacity-out">—</dd>
             </div>
             <div class="reading-cell">
-              <dt>Avg. bandwidth per client</dt>
+              <dt id="wlan-per-client-label">Avg. bandwidth per client</dt>
               <dd class="reading" id="wlan-per-client">—</dd>
             </div>
           </dl>
 
           <p class="plate-note">Capacity is per radio. A dual-band AP (2.4 + 5/6 GHz) adds the capacity of its second radio.</p>
+
+          <table class="breakdown">
+            <caption>Load by radio</caption>
+            <thead>
+              <tr><th scope="col">Radio</th><th scope="col">Effective</th><th scope="col">Capacity</th><th scope="col">Utilization</th><th scope="col">APs</th></tr>
+            </thead>
+            <tbody id="wlan-radio-table"></tbody>
+          </table>
 
           <table class="breakdown">
             <caption>Breakdown by client type</caption>
@@ -225,7 +227,29 @@
         <span class="cell-label">Mbit/s per client</span>
         <input class="number" type="number" name="mbps" min="0" step="0.1" inputmode="decimal">
       </label>
+      <label class="cell cell--radio">
+        <span class="cell-label">Radio</span>
+        <select name="radio"></select>
+      </label>
       <button class="remove-row" type="button" aria-label="Remove row">✕</button>
+    </li>
+  </template>
+
+  <template id="radio-row-template">
+    <li class="mix-row">
+      <label class="cell cell--profile">
+        <span class="cell-label">Radio</span>
+        <select name="profile"></select>
+      </label>
+      <label class="cell">
+        <span class="cell-label">Channel width</span>
+        <select name="width"></select>
+      </label>
+      <label class="cell">
+        <span class="cell-label">Goodput (Mbit/s)</span>
+        <input class="number" type="number" name="capacity" min="0" step="1" inputmode="decimal">
+      </label>
+      <button class="remove-row" type="button" aria-label="Remove radio">✕</button>
     </li>
   </template>
 </body>
