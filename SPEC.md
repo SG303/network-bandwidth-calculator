@@ -113,20 +113,31 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
 
 ### Inputs
 
-- Client mix (shared component). **Default mix: 20 × office-light, 5 × stream-4k.**
-- Dropdown "AP profile" (band + standard combined):
-  - `2g`: "2.4 GHz (Wi-Fi 4/6)" — widths 20/40
-  - `5g-ac`: "5 GHz – Wi-Fi 5 (802.11ac)" — widths 20/40/80
-  - `5g-ax`: "5 GHz – Wi-Fi 6 (802.11ax)" — widths 20/40/80/160 — **default**
-  - `6g-6e`: "6 GHz – Wi-Fi 6E" — widths 20/40/80/160
-  - `6g-be`: "6 GHz – Wi-Fi 7 (802.11be)" — widths 20/40/80/160/320
-- Dropdown "Channel width" (MHz), filtered by profile, **default 80**.
+- Client mix (shared component). **Default mix: 20 × office-light, 5 ×
+  stream-4k**, both rows on the first radio. Each row has a "Radio" select
+  assigning the clients to one of the AP's radios; the column is hidden while
+  the AP has only one radio.
+- Radio list "AP radios": 1–4 radios (**default: one**, see below). Every radio
+  has:
+  - Dropdown "Radio" (band + standard combined):
+    - `2g`: "2.4 GHz (Wi-Fi 4/6)" — widths 20/40
+    - `5g-ac`: "5 GHz – Wi-Fi 5 (802.11ac)" — widths 20/40/80
+    - `5g-ax`: "5 GHz – Wi-Fi 6 (802.11ax)" — widths 20/40/80/160 — **default**
+    - `6g-6e`: "6 GHz – Wi-Fi 6E" — widths 20/40/80/160
+    - `6g-be`: "6 GHz – Wi-Fi 7 (802.11be)" — widths 20/40/80/160/320
+  - Dropdown "Channel width" (MHz), filtered by profile, **default 80**.
+  - Number field "Goodput (Mbit/s)" — auto-filled from the matrix below when
+    profile/width changes, but editable (override).
+  - Remove button "✕" (accessible name "Remove radio"), hidden while only one
+    radio exists. Button "+ Add radio", hidden at four radios. Removing a radio
+    moves its clients to the first radio. New radios start from the default
+    radio; ids stay stable so rows keep their assignment.
+  Shared helper text: "Planning values per band, standard and width — usable
+  throughput per radio, not the PHY data rate. Edit a value to override it."
+  With an invalid value: "<radio label>: enter a value greater than 0. Using
+  the planning value of … until then." (plus `aria-invalid` on that field).
 - Slider "Concurrency (statistical)" 10–100%, step 5, **default 25%** — same
   control and helper text as the wired tab.
-- Number field "Capacity per AP radio (planning goodput, Mbit/s)" — auto-filled
-  from the matrix below when profile/width changes, but editable (override).
-  Default width 80. Helper text: "Planning value for this profile: …
-  Usable throughput per radio — not the PHY data rate."
 
 ### Capacity matrix (planning goodput per AP radio)
 
@@ -146,38 +157,68 @@ especially conservative because of interference and legacy clients.
 
 ### Formulas
 
-- Peak demand `D = Σ count_i × mbps_i` (Mbit/s), client count `N = Σ count_i`
-- Effective load `E = D × concurrency` (Mbit/s)
-- Capacity `C` = matrix value or user override (planning goodput, Mbit/s)
-- Utilization `U = E / C`
-- Verdict: `U ≤ 0.60` → "OK – headroom available" (green);
-  `0.60 < U ≤ 0.85` → "Borderline – tight during load peaks" (amber);
-  `U > 0.85` → "Overloaded – add APs, widen the channel or change the
-  profile" (red)
-- Recommended APs `= max(1, ceil(E / (0.6 × C)))` — "Recommended APs for
-  this mix (max. 60% utilization per AP)"
-- Average per client `= C / N` (Mbit/s) — "Avg. bandwidth per client"
+Per radio `r`, counting only the client rows assigned to it:
 
-### Outputs (result cards + breakdown table)
+- Peak demand `D_r = Σ count_i × mbps_i` (Mbit/s), clients `N_r = Σ count_i`
+- Effective load `E_r = D_r × concurrency` (Mbit/s)
+- Capacity `C_r` = matrix value or user override (planning goodput, Mbit/s)
+- Utilization `U_r = E_r / C_r`
+- Verdict per radio: `U_r ≤ 0.60` → "OK – headroom available" (green);
+  `0.60 < U_r ≤ 0.85` → "Borderline – tight during load peaks" (amber);
+  `U_r > 0.85` → "Overloaded – add APs, widen the channel or change the
+  profile" (red). A radio without clients shows "idle".
+- APs needed by this radio `= 0` without clients, otherwise
+  `max(1, ceil(E_r / (0.6 × C_r)))`
+- Average per client `= C_r / N_r` (Mbit/s)
 
+For the AP (one device carries all of its radios):
+
+- Recommended APs `= max(1, max_r APs_r)` — **the highest single-radio
+  requirement, never the sum of the radios** ("Recommended APs for this mix
+  (max. 60% utilization per AP)")
+- Overall verdict = worst radio verdict; the utilization shown is the one of
+  the limiting radio (highest `U_r`)
+- Totals: `D = Σ D_r`, `E = Σ E_r`, `N = Σ N_r`
+
+### Outputs (result cards, per-radio table + breakdown table)
+
+- "Utilization" (hero) = `U` of the limiting radio, with colored CSS bar and %
+  (cap bar fill at 100% width, keep the real number as text, e.g. "375%")
+- Verdict badge (worst radio)
+- "Recommended APs" with note "Recommended APs for this mix (max. 60%
+  utilization per AP)"; with more than one radio: "Highest requirement of a
+  single radio (max. 60% utilization per AP)"
+- With more than one radio the status note reads "Limiting radio: …"
 - "Peak demand (all at once)" = D
 - "Effective demand (at X% concurrency)" = E
-- "AP capacity (planning goodput)" = C
-- "Utilization" with colored CSS bar and % (cap bar fill at 100% width,
-  keep the real number as text, e.g. "1500%")
-- Verdict badge
-- "Avg. bandwidth per client", "Recommended APs"
+- "AP capacity (planning goodput)" = C of the limiting radio (label becomes
+  "Capacity, limiting radio" with more than one radio)
+- "Avg. bandwidth per client" of the limiting radio (label becomes
+  "Avg. per client, limiting radio" with more than one radio)
+- "Load by radio" table: radio label ("5 GHz (Wi-Fi 6) @ 80 MHz"), effective
+  load, capacity, utilization with verdict badge ("idle" without clients),
+  APs ("—" without clients)
 - Note: "Capacity is per radio. A dual-band AP (2.4 + 5/6 GHz) adds the
   capacity of its second radio."
+- "Breakdown by client type" table: count, Mbit/s, subtotal, total row
 
 ### Acceptance examples (must match exactly)
 
-1. Default mix (20 × 2 + 5 × 25) on 5g-ax @ 80 MHz, concurrency 25%:
+1. Default mix (20 × 2 + 5 × 25) on the default radio (5g-ax @ 80 MHz),
+   concurrency 25%:
    D = 165 Mbit/s, E = 41.25 Mbit/s, C = 450, U = 9.2% → OK; APs = 1;
    avg. per client = 18 Mbit/s.
 2. 30 × stream-4k on 2g @ 20 MHz, concurrency 25%:
    D = 750 Mbit/s, E = 187.5 Mbit/s, C = 50, U = 375% → Overloaded; APs = 7.
    (At concurrency 100% the same mix gives U = 1500% and APs = 25.)
+3. Two radios (2g @ 20 MHz + 5g-ax @ 80 MHz): 10 × iot on the 2.4 GHz radio,
+   20 × office-light + 5 × stream-4k on the 5 GHz radio, concurrency 25%:
+   2.4 GHz: D = 5, E = 1.25, C = 50, U = 2.5% → OK, APs = 1;
+   5 GHz: D = 165, E = 41.25, C = 450, U = 9.2% → OK, APs = 1;
+   totals D = 170, E = 42.5 → **APs = 1** (limiting radio: 5 GHz).
+4. Same two radios, 30 × stream-4k on the 2.4 GHz radio, 5 GHz idle,
+   concurrency 25%:
+   2.4 GHz: U = 375% → APs = 7; 5 GHz: idle (APs 0) → **APs = 7**, not 8.
 
 ## UI / UX
 
@@ -187,7 +228,9 @@ especially conservative because of interference and legacy clients.
 - Layout: two-column grid (inputs left, results right) ≥ 960 px, stacked below.
 - Client-mix component: table-like rows: type select, count (number, min 0,
   step 1), Mbit/s per client (number, min 0, step 0.1), remove button "✕"
-  (accessible name "Remove row"). Button "+ Add client type". Same type may appear in multiple rows.
+  (accessible name "Remove row"). Button "+ Add client type". Same type may appear in multiple rows. WLAN rows add a "Radio" select (labels like
+  "5 GHz (Wi-Fi 6) @ 80 MHz") when the AP has more than one radio; the column
+  is hidden otherwise. The radio list itself uses the same row pattern.
 - Everything recalculates live on every input change (no calculate button).
 - Reset button per tab ("Reset") → restores the tab defaults and clears
   its localStorage entry.
@@ -231,13 +274,17 @@ Binding quality floor (everything else is the designer's intentional choice):
   error "Enter a value greater than 0. Using the planning value of … until
   then."
 - Corrupt or missing localStorage: fall back to defaults.
+- Client rows whose radio no longer exist move to the first radio (same happens
+  when a radio is removed). At least one radio always exists, at most four.
+- States saved by older versions (one radio at the top level) migrate to a
+  single-radio AP automatically.
 - Very large numbers: format as Gbit/s where sensible; no layout breakage.
 
 ## Acceptance criteria
 
 - [ ] `index.html` opens via `file://` in a current Chrome/Firefox, zero
       console errors, no external network requests.
-- [ ] Both acceptance examples above produce exactly the documented numbers.
+- [ ] All acceptance examples above produce exactly the documented numbers.
 - [ ] Live recalculation on every input; tab switching keeps both states.
 - [ ] Inputs persist in localStorage (`nbc-wired-v1`, `nbc-wlan-v1`) across
       reloads; reset works.

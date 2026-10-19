@@ -229,6 +229,22 @@ input.number[aria-invalid="true"] {
   align-items: center;
 }
 
+/* Radio column: only shown when the AP has more than one radio */
+.mix .cell--radio,
+.mix-head span:nth-child(4) {
+  display: none;
+}
+
+.mix--radios .mix-head,
+.mix--radios .mix-row {
+  grid-template-columns: minmax(0, 1fr) 4.5rem 5.75rem 9rem 2.5rem;
+}
+
+.mix--radios .cell--radio,
+.mix--radios .mix-head span:nth-child(4) {
+  display: block;
+}
+
 .mix-head {
   align-items: end;
   padding-bottom: 0.375rem;
@@ -334,24 +350,23 @@ input[type="range"] {
   cursor: pointer;
 }
 
-/* WLAN radio fields */
-.radio-fields {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  gap: 1rem;
-}
-
 .field label {
   display: block;
   margin-bottom: 0.375rem;
 }
 
-.field--wide {
-  grid-column: 1 / -1;
+/* AP radio list */
+.radio-list .mix-head,
+.radio-list .mix-row {
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 7rem 2.5rem;
 }
 
-.field--wide input.number {
-  max-width: 12rem;
+.radio-list .mix-head span {
+  text-align: left;
+}
+
+.radio-list .mix-head span:nth-child(3) {
+  text-align: right;
 }
 
 /* Assumptions */
@@ -833,8 +848,23 @@ input[type="range"] {
     align-self: end;
   }
 
-  .radio-fields {
-    grid-template-columns: minmax(0, 1fr);
+  .radio-list .cell--profile {
+    grid-column: 1 / -1;
+  }
+
+  .radio-list .remove-row {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .mix--radios .cell--radio {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .mix--radios .remove-row {
+    grid-column: 3;
+    grid-row: 2;
   }
 
   .primary--split {
