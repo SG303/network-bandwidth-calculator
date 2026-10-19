@@ -388,7 +388,8 @@ function setReading(el, reading) {
     const unit = document.createElement('span');
     unit.className = 'unit';
     unit.textContent = reading.unit;
-    el.append(' ', unit);
+    // Percent signs sit tight against the number, rates keep a space.
+    el.append(reading.tight ? '' : ' ', unit);
   }
 }
 
@@ -500,7 +501,7 @@ function renderWlan() {
   $('wlan-concurrency-value').textContent = `${data.concurrency}%`;
   $('wlan-effective-label').textContent = `Effective demand (at ${data.concurrency}% concurrency)`;
 
-  setReading($('wlan-utilization'), empty ? null : { num: formatPercent(r.utilization).slice(0, -1), unit: '%' });
+  setReading($('wlan-utilization'), empty ? null : { num: formatPercent(r.utilization).slice(0, -1), unit: '%', tight: true });
   setBadge($('wlan-verdict'), empty ? '' : VERDICT_TEXT[r.verdict], empty ? '' : r.verdict);
   setScale($('wlan-scale'), empty ? null : r.utilization);
   setNote($('wlan-note'), empty ? EMPTY_TEXT : (single ? '' : `Limiting radio: ${limiting.label}`), 'neutral');
@@ -529,17 +530,31 @@ function renderRadioTable(result) {
     const tr = body.insertRow();
     const th = document.createElement('th');
     th.scope = 'row';
-    th.textContent = radio.label;
+    const short = (AP_PROFILES[radio.profile] || {}).short || radio.label;
+    const parts = short.match(/^(\S+ GHz)(.*)$/);
+    const name = document.createElement('span');
+    name.className = 'radio-name';
+    name.textContent = parts ? parts[1] : short;
+    const standard = document.createElement('span');
+    standard.className = 'radio-std';
+    standard.textContent = parts ? parts[2] : '';
+    const meta = document.createElement('span');
+    meta.className = 'radio-meta';
+    meta.textContent = `@ ${radio.width} MHz`;
+    th.append(name, standard, ' ', meta);
     tr.append(th);
-    tr.insertCell().textContent = formatRateText(radio.effective);
-    tr.insertCell().textContent = formatRateText(radio.capacity);
+    tr.insertCell().textContent = formatNumber(radio.effective);
+    tr.insertCell().textContent = formatNumber(radio.capacity);
     const utilization = tr.insertCell();
-    utilization.append(`${formatPercent(radio.utilization)} `);
+    const stack = document.createElement('span');
+    stack.className = 'util-stack';
+    stack.append(formatPercent(radio.utilization), ' ');
     const badge = document.createElement('span');
     badge.className = 'badge';
     badge.textContent = radio.clients > 0 ? VERDICT_SHORT[radio.verdict] : 'idle';
     if (radio.clients > 0) badge.dataset.zone = radio.verdict;
-    utilization.append(badge);
+    stack.append(badge);
+    utilization.append(stack);
     tr.insertCell().textContent = radio.clients > 0 ? formatNumber(radio.aps, 0) : '—';
   }
 }
@@ -579,11 +594,12 @@ function buildMixRow(tab, row, index) {
   select.value = row.type;
   li.querySelector('[name="count"]').value = row.count;
   li.querySelector('[name="mbps"]').value = row.mbps;
-  const radioCell = li.querySelector('.cell--radio');
-  if (tab !== 'wlan') {
-    radioCell.remove();
+  const radioPick = li.querySelector('.cell-field--radio');
+  // The radio pick only makes sense when the AP actually has several radios.
+  if (tab !== 'wlan' || state.wlan.radios.length < 2) {
+    radioPick.remove();
   } else {
-    const radioSelect = radioCell.querySelector('[name="radio"]');
+    const radioSelect = radioPick.querySelector('[name="radio"]');
     radioSelect.append(...state.wlan.radios.map((x) => new Option(radioLabel(x), x.id)));
     radioSelect.value = row.radio;
   }
@@ -591,9 +607,7 @@ function buildMixRow(tab, row, index) {
 }
 
 function renderMix(tab) {
-  const root = $(`${tab}-mix`);
-  root.classList.toggle('mix--radios', tab === 'wlan' && state.wlan.radios.length > 1);
-  root.querySelector('.mix-rows').replaceChildren(...state[tab].rows.map((row, i) => buildMixRow(tab, row, i)));
+  $(`${tab}-mix`).querySelector('.mix-rows').replaceChildren(...state[tab].rows.map((row, i) => buildMixRow(tab, row, i)));
 }
 
 function setupMix(tab) {

@@ -112,7 +112,7 @@
           <section class="mix" id="wlan-mix" aria-labelledby="wlan-mix-title">
             <h2 class="block-title" id="wlan-mix-title">Client mix</h2>
             <div class="mix-head" aria-hidden="true">
-              <span>Client type</span><span>Count</span><span>Mbit/s per client</span><span>Radio</span>
+              <span>Client type</span><span>Count</span><span>Mbit/s per client</span>
             </div>
             <ul class="mix-rows"></ul>
             <button class="button add-row" type="button">+ Add client type</button>
@@ -188,10 +188,16 @@
 
           <p class="plate-note">Capacity is per radio. A dual-band AP (2.4 + 5/6 GHz) adds the capacity of its second radio.</p>
 
-          <table class="breakdown">
+          <table class="breakdown breakdown--radio">
             <caption>Load by radio</caption>
             <thead>
-              <tr><th scope="col">Radio</th><th scope="col">Effective</th><th scope="col">Capacity</th><th scope="col">Utilization</th><th scope="col">APs</th></tr>
+              <tr>
+                <th scope="col">Radio</th>
+                <th scope="col">Effective<br><span class="th-unit">Mbit/s</span></th>
+                <th scope="col">Capacity<br><span class="th-unit">Mbit/s</span></th>
+                <th scope="col">Utilization</th>
+                <th scope="col">APs</th>
+              </tr>
             </thead>
             <tbody id="wlan-radio-table"></tbody>
           </table>
@@ -215,10 +221,16 @@
 
   <template id="mix-row-template">
     <li class="mix-row">
-      <label class="cell cell--type">
-        <span class="cell-label">Client type</span>
-        <select name="type"></select>
-      </label>
+      <div class="cell cell--type">
+        <label class="cell-field">
+          <span class="cell-label">Client type</span>
+          <select name="type"></select>
+        </label>
+        <label class="cell-field cell-field--radio">
+          <span class="radio-pick-label">Radio</span>
+          <select name="radio"></select>
+        </label>
+      </div>
       <label class="cell">
         <span class="cell-label">Count</span>
         <input class="number" type="number" name="count" min="0" step="1" inputmode="numeric">
@@ -226,10 +238,6 @@
       <label class="cell">
         <span class="cell-label">Mbit/s per client</span>
         <input class="number" type="number" name="mbps" min="0" step="0.1" inputmode="decimal">
-      </label>
-      <label class="cell cell--radio">
-        <span class="cell-label">Radio</span>
-        <select name="radio"></select>
       </label>
       <button class="remove-row" type="button" aria-label="Remove row">✕</button>
     </li>

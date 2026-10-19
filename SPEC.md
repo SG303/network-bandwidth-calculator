@@ -114,9 +114,9 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
 ### Inputs
 
 - Client mix (shared component). **Default mix: 20 × office-light, 5 ×
-  stream-4k**, both rows on the first radio. Each row has a "Radio" select
-  assigning the clients to one of the AP's radios; the column is hidden while
-  the AP has only one radio.
+  stream-4k**, both rows on the first radio. Each row has a compact "Radio"
+  line below the client-type select that assigns the clients to one of the
+  AP's radios; it is hidden while the AP has only one radio.
 - Radio list "AP radios": 1–4 radios (**default: one**, see below). Every radio
   has:
   - Dropdown "Radio" (band + standard combined):
@@ -195,9 +195,10 @@ For the AP (one device carries all of its radios):
   "Capacity, limiting radio" with more than one radio)
 - "Avg. bandwidth per client" of the limiting radio (label becomes
   "Avg. per client, limiting radio" with more than one radio)
-- "Load by radio" table: radio label ("5 GHz (Wi-Fi 6) @ 80 MHz"), effective
-  load, capacity, utilization with verdict badge ("idle" without clients),
-  APs ("—" without clients)
+- "Load by radio" table: radio (band + standard, channel width on a second
+  line), effective load and capacity in Mbit/s (unit in the column header),
+  utilization with verdict badge ("idle" without clients), APs ("—" without
+  clients)
 - Note: "Capacity is per radio. A dual-band AP (2.4 + 5/6 GHz) adds the
   capacity of its second radio."
 - "Breakdown by client type" table: count, Mbit/s, subtotal, total row
@@ -228,9 +229,11 @@ For the AP (one device carries all of its radios):
 - Layout: two-column grid (inputs left, results right) ≥ 960 px, stacked below.
 - Client-mix component: table-like rows: type select, count (number, min 0,
   step 1), Mbit/s per client (number, min 0, step 0.1), remove button "✕"
-  (accessible name "Remove row"). Button "+ Add client type". Same type may appear in multiple rows. WLAN rows add a "Radio" select (labels like
-  "5 GHz (Wi-Fi 6) @ 80 MHz") when the AP has more than one radio; the column
-  is hidden otherwise. The radio list itself uses the same row pattern.
+  (accessible name "Remove row"). Button "+ Add client type". Same type may
+  appear in multiple rows. WLAN rows add a "Radio" select (labels like
+  "5 GHz (Wi-Fi 6) @ 80 MHz") below the type select when the AP has more than
+  one radio; with a single radio only the type select is shown. The radio list
+  uses the same row pattern (profile, channel width, goodput, remove).
 - Everything recalculates live on every input change (no calculate button).
 - Reset button per tab ("Reset") → restores the tab defaults and clears
   its localStorage entry.

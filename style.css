@@ -226,23 +226,38 @@ input.number[aria-invalid="true"] {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 4.5rem 5.75rem 2.5rem;
   gap: 0.5rem;
-  align-items: center;
+  align-items: start;
 }
 
-/* Radio column: only shown when the AP has more than one radio */
-.mix .cell--radio,
-.mix-head span:nth-child(4) {
-  display: none;
+/* Client mix: the radio assignment sits under the client type */
+.cell--type {
+  display: grid;
+  gap: 0.375rem;
 }
 
-.mix--radios .mix-head,
-.mix--radios .mix-row {
-  grid-template-columns: minmax(0, 1fr) 4.5rem 5.75rem 9rem 2.5rem;
-}
-
-.mix--radios .cell--radio,
-.mix--radios .mix-head span:nth-child(4) {
+.cell-field {
   display: block;
+}
+
+.cell-field--radio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.radio-pick-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.cell-field--radio select {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  min-height: 2rem;
+  font-size: 0.875rem;
 }
 
 .mix-head {
@@ -358,7 +373,7 @@ input[type="range"] {
 /* AP radio list */
 .radio-list .mix-head,
 .radio-list .mix-row {
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 7rem 2.5rem;
+  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1fr) 5.5rem 2.5rem;
 }
 
 .radio-list .mix-head span {
@@ -744,6 +759,41 @@ input[type="range"] {
   border-bottom-color: var(--hairline);
 }
 
+/* Per-radio table: units live in the header, numbers stay on one line. */
+.breakdown .th-unit {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.breakdown--radio tbody th {
+  font-weight: 600;
+}
+
+.radio-meta {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Percentage and verdict stay on one line when there is room and stack when not. */
+.util-stack {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+/* The verdict sits next to the share of capacity inside the compact table. */
+.breakdown--radio .badge {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.8125rem;
+}
+
+.breakdown--radio tbody td:not(:first-child) {
+  white-space: nowrap;
+}
+
 .breakdown td:not(:first-child),
 .breakdown tfoot th,
 .breakdown tfoot td {
@@ -825,7 +875,8 @@ input[type="range"] {
     display: none;
   }
 
-  .mix-row {
+  .mix-row,
+  .radio-list .mix-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 2.5rem;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--hairline);
@@ -857,16 +908,6 @@ input[type="range"] {
     grid-row: 2;
   }
 
-  .mix--radios .cell--radio {
-    grid-column: 1 / -1;
-    grid-row: 3;
-  }
-
-  .mix--radios .remove-row {
-    grid-column: 3;
-    grid-row: 2;
-  }
-
   .primary--split {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -886,5 +927,26 @@ input[type="range"] {
   .compare-row {
     grid-template-columns: 4.75rem minmax(0, 1fr) 4.25rem;
     gap: 0.75rem;
+  }
+
+  /* The per-radio table has to fit a phone: tighter cells, smaller verdict. */
+  .breakdown--radio th,
+  .breakdown--radio td {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+
+  .util-stack {
+    flex-wrap: wrap;
+  }
+
+  /* The band and the profile stay readable; the standard is in "AP radios" above. */
+  .radio-std {
+    display: none;
+  }
+
+  .breakdown--radio .badge {
+    padding: 0.125rem 0.5rem;
+    font-size: 0.8125rem;
   }
 }
