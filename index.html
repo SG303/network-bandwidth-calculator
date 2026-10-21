@@ -130,7 +130,7 @@
           <section class="mix radio-list" id="wlan-radios" aria-labelledby="wlan-radios-title">
             <h2 class="block-title" id="wlan-radios-title">AP radios</h2>
             <div class="mix-head" aria-hidden="true">
-              <span>Radio</span><span>Channel width</span><span>Goodput (Mbit/s)</span>
+              <span>Radio</span><span>Channel width</span><span>Capacity (Mbit/s)</span>
             </div>
             <ul class="mix-rows"></ul>
             <button class="button add-row" type="button">+ Add radio</button>
@@ -139,7 +139,7 @@
 
           <details class="assumptions">
             <summary>Assumptions &amp; notes</summary>
-            <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective load on a radio. That load is compared with the planning goodput of this radio — the throughput it actually carries, in practice roughly a third to half of its PHY data rate, and deliberately conservative on 2.4 GHz. It is not the data rate from the datasheet. Up to 60% utilization one AP is enough; above 85% it is overloaded. One AP carries all of its radios, so the recommendation is set by the radio with the highest requirement. All defaults are editable and deliberately conservative planning values.</p>
+            <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective load on a radio. That load is compared with the capacity of this radio — the throughput it actually carries, in practice roughly a third to half of its PHY data rate, and deliberately conservative on 2.4 GHz. It is not the data rate from the datasheet. Up to 60% utilization one AP is enough; above 85% it is overloaded. One AP carries all of its radios, so the recommendation is set by the radio with the highest requirement. All defaults are editable and deliberately conservative planning values.</p>
           </details>
 
           <button class="button reset" type="button" data-reset="wlan">Reset</button>
@@ -177,7 +177,7 @@
               <dd class="reading" id="wlan-effective">—</dd>
             </div>
             <div class="reading-cell">
-              <dt id="wlan-capacity-label">AP capacity (planning goodput)</dt>
+              <dt id="wlan-capacity-label">AP capacity (usable throughput)</dt>
               <dd class="reading" id="wlan-capacity-out">—</dd>
             </div>
             <div class="reading-cell">
@@ -254,7 +254,7 @@
         <select name="width"></select>
       </label>
       <label class="cell">
-        <span class="cell-label">Goodput (Mbit/s)</span>
+        <span class="cell-label">Capacity (Mbit/s)</span>
         <input class="number" type="number" name="capacity" min="0" step="1" inputmode="decimal">
       </label>
       <button class="remove-row" type="button" aria-label="Remove radio">✕</button>
