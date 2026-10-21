@@ -126,7 +126,7 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
     - `6g-6e`: "6 GHz – Wi-Fi 6E" — widths 20/40/80/160
     - `6g-be`: "6 GHz – Wi-Fi 7 (802.11be)" — widths 20/40/80/160/320
   - Dropdown "Channel width" (MHz), filtered by profile, **default 80**.
-  - Number field "Goodput (Mbit/s)" — auto-filled from the matrix below when
+  - Number field "Capacity (Mbit/s)" — auto-filled from the matrix below when
     profile/width changes, but editable (override).
   - Remove button "✕" (accessible name "Remove radio"), hidden while only one
     radio exists. Button "+ Add radio", hidden at four radios. Removing a radio
@@ -139,10 +139,10 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
 - Slider "Concurrency (statistical)" 10–100%, step 5, **default 25%** — same
   control and helper text as the wired tab.
 
-### Capacity matrix (planning goodput per AP radio)
+### Capacity matrix (usable throughput per AP radio)
 
 The values are the throughput a radio actually carries for its clients (all
-clients on it share this pool): usable aggregate goodput, deliberately
+clients on it share this pool): usable aggregate throughput, deliberately
 conservative, roughly a third to half of the PHY data rate of a typical 2×2
 radio — **not** the data rate printed on the datasheet. 2.4 GHz is kept
 especially conservative because of interference and legacy clients.
@@ -161,7 +161,7 @@ Per radio `r`, counting only the client rows assigned to it:
 
 - Peak demand `D_r = Σ count_i × mbps_i` (Mbit/s), clients `N_r = Σ count_i`
 - Effective load `E_r = D_r × concurrency` (Mbit/s)
-- Capacity `C_r` = matrix value or user override (planning goodput, Mbit/s)
+- Capacity `C_r` = matrix value or user override (usable throughput, Mbit/s)
 - Utilization `U_r = E_r / C_r`
 - Verdict per radio: `U_r ≤ 0.60` → "OK – headroom available" (green);
   `0.60 < U_r ≤ 0.85` → "Borderline – tight during load peaks" (amber);
@@ -191,7 +191,7 @@ For the AP (one device carries all of its radios):
 - With more than one radio the status note reads "Limiting radio: …"
 - "Peak demand (all at once)" = D
 - "Effective demand (at X% concurrency)" = E
-- "AP capacity (planning goodput)" = C of the limiting radio (label becomes
+- "AP capacity (usable throughput)" = C of the limiting radio (label becomes
   "Capacity, limiting radio" with more than one radio)
 - "Avg. bandwidth per client" of the limiting radio (label becomes
   "Avg. per client, limiting radio" with more than one radio)
@@ -233,7 +233,7 @@ For the AP (one device carries all of its radios):
   appear in multiple rows. WLAN rows add a "Radio" select (labels like
   "5 GHz (Wi-Fi 6) @ 80 MHz") below the type select when the AP has more than
   one radio; with a single radio only the type select is shown. The radio list
-  uses the same row pattern (profile, channel width, goodput, remove).
+  uses the same row pattern (profile, channel width, capacity, remove).
 - Everything recalculates live on every input change (no calculate button).
 - Reset button per tab ("Reset") → restores the tab defaults and clears
   its localStorage entry.

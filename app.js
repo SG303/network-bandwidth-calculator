@@ -22,7 +22,7 @@ const UPLINK_CLASSES_GBPS = [1, 10, 25, 40, 100];
 const COMPARISON_CLASSES_GBPS = [1, 10, 25];
 const SWITCH_SIZES = [8, 12, 24, 28, 48, 52];
 
-// Planning goodput per AP radio in Mbit/s (conservative, ~40–45% of PHY rate).
+// Planning capacity (usable throughput) per AP radio in Mbit/s (conservative, ~40–45% of PHY rate).
 const AP_PROFILES = {
   '2g': { label: '2.4 GHz (Wi-Fi 4/6)', short: '2.4 GHz', capacity: { 20: 50, 40: 100 } },
   '5g-ac': { label: '5 GHz – Wi-Fi 5 (802.11ac)', short: '5 GHz (Wi-Fi 5)', capacity: { 20: 80, 40: 170, 80: 350 } },
@@ -511,7 +511,7 @@ function renderWlan() {
     ? 'Recommended APs for this mix (max. 60% utilization per AP)'
     : 'Highest requirement of a single radio (max. 60% utilization per AP)';
 
-  $('wlan-capacity-label').textContent = single ? 'AP capacity (planning goodput)' : 'Capacity, limiting radio';
+  $('wlan-capacity-label').textContent = single ? 'AP capacity (usable throughput)' : 'Capacity, limiting radio';
   $('wlan-per-client-label').textContent = single ? 'Avg. bandwidth per client' : 'Avg. per client, limiting radio';
   setReading($('wlan-peak'), empty ? null : formatRate(r.peak));
   setReading($('wlan-effective'), empty ? null : formatRate(r.effective));

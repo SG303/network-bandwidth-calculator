@@ -31,12 +31,12 @@ defaults.
   (1 Gbit/s baseline). Switch size = smallest of 8 / 12 / 24 / 28 / 48 / 52
   ports with 20% reserve.
 - **WLAN**: each AP is described by its radios (1–4: band/standard, channel
-  width, planning goodput) and every client row is assigned to one of them.
+  width, capacity) and every client row is assigned to one of them.
   Effective load per radio = peak demand × concurrency (same slider and
-  default 25% as the wired tab), compared with the planning goodput of this
-  radio: the throughput it really carries (usable aggregate goodput for all
+  default 25% as the wired tab), compared with the capacity of this
+  radio: the usable aggregate throughput it really carries for all
   clients of that radio, in practice roughly a third to half of the PHY data
-  rate and not the datasheet value), taken from a matrix per band/standard and
+  rate and not the datasheet value, taken from a matrix per band/standard and
   channel width and editable as an override.
 - **Verdict thresholds**: utilization ≤ 60% is OK, 60–85% borderline,
   above 85% overloaded. Recommended APs per radio = ⌈effective demand /
