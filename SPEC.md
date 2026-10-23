@@ -88,7 +88,10 @@ Shared by both tabs. Each row in the mix: type (dropdown), count, editable
   consider the next uplink class."
 - Port count `N = Σ count_i`. Switch size: smallest of 8 / 12 / 24 / 28 / 48 / 52
   ports with `ports ≥ N × 1.2` (20% reserve). Text: "e.g. 24-port switch
-  (with 20% reserve)".
+  (with 20% reserve)". If `N × 1.2 > 52`: several 48-port switches,
+  `count = ceil(N × 1.2 / 48)`, text "e.g. 3 × 48-port switch (with 20%
+  reserve)". The 52-port class is not stacked: its four extra ports are
+  usually uplink/stacking ports, which every switch of a stack needs.
 
 ### Outputs (result cards + breakdown table)
 
@@ -178,13 +181,17 @@ Per radio `r`, counting only the client rows assigned to it:
 - Peak demand `D_r = Σ count_i × mbps_i` (Mbit/s), clients `N_r = Σ count_i`
 - Effective load `E_r = D_r × concurrency` (Mbit/s)
 - Capacity `C_r` = matrix value or user override (usable throughput, Mbit/s)
-- Utilization `U_r = E_r / C_r`
+- Utilization `U_r = E_r / C_r`, rounded to 0.1% (the displayed precision)
+  before the verdict and the AP count are derived from it, so the verdict
+  always matches the shown number (60.04% → "60.0%" → OK). The same rounding
+  applies to the uplink utilization and its low-headroom hint.
 - Verdict per radio: `U_r ≤ 0.60` → "OK – headroom available" (green);
   `0.60 < U_r ≤ 0.85` → "Borderline – tight during load peaks" (amber);
   `U_r > 0.85` → "Overloaded – add APs, widen the channel or change the
   profile" (red). A radio without clients shows "idle".
 - APs needed by this radio `= 0` without clients, otherwise
-  `max(1, ceil(E_r / (0.6 × C_r)))`
+  `max(1, ceil(U_r / 0.6))` (= `ceil(E_r / (0.6 × C_r))` with the rounded
+  utilization)
 - Average per client `= C_r / N_r` (Mbit/s)
 
 For the AP (one device carries all of its radios):
@@ -294,9 +301,9 @@ Binding quality floor (everything else is the designer's intentional choice):
 
 ## Edge cases (must be handled)
 
-- Empty mix / all counts 0: show "—" and a neutral hint "No clients
-  configured. Add a client type or enter a count above 0." No NaN/Infinity
-  anywhere; verdict hidden.
+- Empty mix / all counts 0: show "—" on every result card (including the
+  WLAN capacity card) and a neutral hint "No clients configured. Add a client
+  type or enter a count above 0." No NaN/Infinity anywhere; verdict hidden.
 - Invalid/empty number fields: treat as 0 for calculation without crashing.
 - Capacity override ≤ 0: fall back to matrix value and mark field, with the
   error "Enter a value greater than 0. Using the planning value of … until

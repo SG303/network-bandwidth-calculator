@@ -29,7 +29,7 @@ defaults.
   that carries this load; above 85% utilization the tool suggests the next
   class. The access port speed follows the largest single-client demand
   (1 Gbit/s baseline). Switch size = smallest of 8 / 12 / 24 / 28 / 48 / 52
-  ports with 20% reserve.
+  ports with 20% reserve; above 52 ports, several 48-port switches.
 - **WLAN**: each AP is described by its radios (1–4: band/standard, channel
   width, spatial streams, capacity) and every client row is assigned to one of
   them.
@@ -43,8 +43,9 @@ defaults.
   3 dB of link margin (roughly one MCS step away from the AP) but no extra
   streams, and MU-MIMO is not counted.
 - **Verdict thresholds**: utilization ≤ 60% is OK, 60–85% borderline,
-  above 85% overloaded. Recommended APs per radio = ⌈effective demand /
-  (60% × capacity)⌉. Because one AP carries all of its radios, the AP count is
+  above 85% overloaded, judged on the utilization as displayed (rounded to
+  0.1%). Recommended APs per radio = ⌈utilization / 60%⌉, i.e. ⌈effective
+  demand / (60% × capacity)⌉. Because one AP carries all of its radios, the AP count is
   the **highest** single-radio requirement (never the sum), at least 1.
 
 ## Disclaimer
