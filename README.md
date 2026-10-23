@@ -4,8 +4,6 @@
 
 **Live:** <https://sg303.github.io/network-bandwidth-calculator/>
 
-Created in [T3 Code](https://t3.codes).
-
 A small, dependency-free web tool for network engineers. Enter a typical client
 mix and it estimates the bandwidth needed on switch access ports and uplinks,
 the switch size, and the load on a WLAN access point, including a verdict and
