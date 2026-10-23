@@ -22,7 +22,8 @@ const UPLINK_CLASSES_GBPS = [1, 10, 25, 40, 100];
 const COMPARISON_CLASSES_GBPS = [1, 10, 25];
 const SWITCH_SIZES = [8, 12, 24, 28, 48, 52];
 
-// Planning capacity (usable throughput) per AP radio in Mbit/s (conservative, ~40–45% of PHY rate).
+// Planning capacity (usable throughput) per AP radio in Mbit/s: conservative, roughly a third
+// to half of the PHY rate of a typical 2×2 radio, lower still on 2.4 GHz.
 const AP_PROFILES = {
   '2g': { label: '2.4 GHz (Wi-Fi 4/6)', short: '2.4 GHz', capacity: { 20: 50, 40: 100 } },
   '5g-ac': { label: '5 GHz – Wi-Fi 5 (802.11ac)', short: '5 GHz (Wi-Fi 5)', capacity: { 20: 80, 40: 170, 80: 350 } },
@@ -81,6 +82,13 @@ function clean(n) {
   return Math.round(n * 1e9) / 1e9;
 }
 
+// Utilization rounded to 0.1%, the precision shown in the UI. Thresholds and
+// the AP count use this value, so the verdict always matches the displayed
+// number (60.04% shows as "60.0%" and counts as OK, not borderline).
+function utilizationOf(load, capacity) {
+  return Math.round(clean((load * 1000) / capacity)) / 1000;
+}
+
 function summarizeMix(rows) {
   let demand = 0;
   let clients = 0;
@@ -118,7 +126,7 @@ function accessPortClass(maxPerClient) {
 function recommendUplink(effectiveMbps) {
   const gbps = UPLINK_CLASSES_GBPS.find((g) => g * 1000 >= effectiveMbps);
   if (gbps === undefined) return { gbps: null, utilization: null, lowReserve: false };
-  const utilization = clean(effectiveMbps / (gbps * 1000));
+  const utilization = utilizationOf(effectiveMbps, gbps * 1000);
   return { gbps, utilization, lowReserve: utilization > BORDERLINE_LIMIT };
 }
 
@@ -146,7 +154,7 @@ function calcWired({ rows, concurrency }) {
     switchSize: recommendSwitch(mix.clients),
     comparison: COMPARISON_CLASSES_GBPS.map((gbps) => ({
       gbps,
-      utilization: clean(effective / (gbps * 1000)),
+      utilization: utilizationOf(effective, gbps * 1000),
     })),
   };
 }
@@ -180,7 +188,7 @@ function calcRadio(rows, radio, concurrency) {
   const override = toNumber(radio.capacity);
   const effectiveCapacity = override > 0 ? override : planned;
   const effective = clean((mix.demand * concurrency) / 100);
-  const utilization = clean(effective / effectiveCapacity);
+  const utilization = utilizationOf(effective, effectiveCapacity);
   return {
     id: radio.id,
     profile: radio.profile,
@@ -195,7 +203,7 @@ function calcRadio(rows, radio, concurrency) {
     capacityFallback: override === 0,
     utilization,
     verdict: utilizationZone(utilization),
-    aps: mix.clients > 0 ? Math.max(1, Math.ceil(clean(effective / (OK_LIMIT * effectiveCapacity)))) : 0,
+    aps: mix.clients > 0 ? Math.max(1, Math.ceil(clean(utilization / OK_LIMIT))) : 0,
     perClient: mix.clients > 0 ? clean(effectiveCapacity / mix.clients) : null,
   };
 }
@@ -534,7 +542,7 @@ function renderWlan() {
   $('wlan-per-client-label').textContent = single ? 'Avg. bandwidth per client' : 'Avg. per client, limiting radio';
   setReading($('wlan-peak'), empty ? null : formatRate(r.peak));
   setReading($('wlan-effective'), empty ? null : formatRate(r.effective));
-  setReading($('wlan-capacity-out'), formatRate(r.capacity));
+  setReading($('wlan-capacity-out'), empty ? null : formatRate(r.capacity));
   setReading($('wlan-per-client'), empty ? null : formatRate(r.perClient));
 
   $('wlan-streams-note').hidden = !r.radios.some((x) => x.streams === 4);
