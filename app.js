@@ -31,12 +31,20 @@ const AP_PROFILES = {
   '6g-be': { label: '6 GHz – Wi-Fi 7 (802.11be)', short: '6 GHz (Wi-Fi 7)', capacity: { 20: 120, 40: 240, 80: 500, 160: 1000, 320: 1900 } },
 };
 
+// Spatial streams of the AP radio. The matrix above is based on a 2×2 radio.
+// A 4×4 radio serving 2×2 clients gains about 3 dB link margin (receive
+// combining uplink, beamforming downlink), roughly one MCS step for clients
+// away from the AP. It adds no streams for those clients and MU-MIMO is not
+// counted, so the planning value rises by a conservative 15%.
+const STREAM_OPTIONS = [2, 4];
+const FOUR_BY_FOUR_GAIN_PCT = 15;
+
 const OK_LIMIT = 0.6;
 const BORDERLINE_LIMIT = 0.85;
 const MAX_RADIOS = 4;
 
 // One radio of an AP; an AP is described by a list of these.
-const DEFAULT_RADIO = { id: 'r1', profile: '5g-ax', width: 80, capacity: 450 };
+const DEFAULT_RADIO = { id: 'r1', profile: '5g-ax', width: 80, streams: 2, capacity: 450 };
 
 const DEFAULTS = {
   wired: {
@@ -147,21 +155,28 @@ function channelWidths(profile) {
   return Object.keys(AP_PROFILES[profile].capacity).map(Number);
 }
 
-function plannedCapacity(profile, width) {
+function plannedCapacity(profile, width, streams = 2) {
   const profileData = AP_PROFILES[profile] || AP_PROFILES[DEFAULT_RADIO.profile];
-  return profileData.capacity[width] || DEFAULT_RADIO.capacity;
+  const base = profileData.capacity[width] || DEFAULT_RADIO.capacity;
+  if (streams !== 4) return base;
+  // Integer math keeps halves exact, so 100 → 115 rounds to 120, not 110.
+  return Math.round((base * (100 + FOUR_BY_FOUR_GAIN_PCT)) / 1000) * 10;
 }
 
-// Compact label for results, e.g. "5 GHz (Wi-Fi 6) @ 80 MHz".
+function streamsLabel(streams) {
+  return `${streams}×${streams}`;
+}
+
+// Compact label for results, e.g. "5 GHz (Wi-Fi 6) @ 80 MHz, 2×2".
 function radioLabel(radio) {
   const profile = AP_PROFILES[radio.profile] || AP_PROFILES[DEFAULT_RADIO.profile];
-  return `${profile.short} @ ${radio.width} MHz`;
+  return `${profile.short} @ ${radio.width} MHz, ${streamsLabel(radio.streams || 2)}`;
 }
 
 // One radio: demand of its clients, effective load and the APs it alone needs.
 function calcRadio(rows, radio, concurrency) {
   const mix = summarizeMix(rows.filter((row) => row.radio === radio.id));
-  const planned = plannedCapacity(radio.profile, radio.width);
+  const planned = plannedCapacity(radio.profile, radio.width, radio.streams);
   const override = toNumber(radio.capacity);
   const effectiveCapacity = override > 0 ? override : planned;
   const effective = clean((mix.demand * concurrency) / 100);
@@ -170,6 +185,7 @@ function calcRadio(rows, radio, concurrency) {
     id: radio.id,
     profile: radio.profile,
     width: radio.width,
+    streams: radio.streams,
     label: radioLabel(radio),
     ...mix,
     peak: mix.demand,
@@ -296,7 +312,7 @@ function sanitizeRadio(entry, index) {
   // Corrupt profile: the stored width and capacity cannot be trusted either,
   // so restore the whole radio configuration to the documented defaults.
   if (!AP_PROFILES[entry.profile]) {
-    return { id, profile: DEFAULT_RADIO.profile, width: DEFAULT_RADIO.width, capacity: DEFAULT_RADIO.capacity };
+    return { ...DEFAULT_RADIO, id };
   }
   const profile = entry.profile;
   const widths = channelWidths(profile);
@@ -304,10 +320,13 @@ function sanitizeRadio(entry, index) {
   // Invalid width falls back to the widest channel, mirroring the profile
   // switch in the UI; a stale capacity resets to the matching matrix value.
   const width = widthValid ? Number(entry.width) : Math.max(...widths);
-  const capacity = widthValid && Number.isFinite(entry.capacity)
+  // States from before the stream choice have no streams field: they were 2×2.
+  const streamsValid = STREAM_OPTIONS.includes(Number(entry.streams));
+  const streams = streamsValid ? Number(entry.streams) : 2;
+  const capacity = widthValid && (streamsValid || entry.streams === undefined) && Number.isFinite(entry.capacity)
     ? entry.capacity
-    : plannedCapacity(profile, width);
-  return { id, profile, width, capacity };
+    : plannedCapacity(profile, width, streams);
+  return { id, profile, width, streams, capacity };
 }
 
 // Older states stored one radio at the top level ({profile, width, capacity});
@@ -518,6 +537,8 @@ function renderWlan() {
   setReading($('wlan-capacity-out'), formatRate(r.capacity));
   setReading($('wlan-per-client'), empty ? null : formatRate(r.perClient));
 
+  $('wlan-streams-note').hidden = !r.radios.some((x) => x.streams === 4);
+
   renderRadioTable(r);
   renderRadioHelp(r);
   renderBreakdown('wlan', r);
@@ -540,7 +561,7 @@ function renderRadioTable(result) {
     standard.textContent = parts ? parts[2] : '';
     const meta = document.createElement('span');
     meta.className = 'radio-meta';
-    meta.textContent = `@ ${radio.width} MHz`;
+    meta.textContent = `@ ${radio.width} MHz, ${streamsLabel(radio.streams)}`;
     th.append(name, standard, ' ', meta);
     tr.append(th);
     tr.insertCell().textContent = formatNumber(radio.effective);
@@ -572,7 +593,7 @@ function renderRadioHelp(result) {
   if (invalid) {
     help.textContent = `${invalid.label}: enter a value greater than 0. Using the planning value of ${formatRateText(invalid.plannedCapacity)} until then.`;
   } else {
-    help.textContent = 'Planning values per band, standard and width — usable throughput per radio, not the PHY data rate. Edit a value to override it.';
+    help.textContent = 'Planning values per band, standard, width and streams — usable throughput per radio, not the PHY data rate. Edit a value to override it.';
   }
   help.classList.toggle('is-error', Boolean(invalid));
 }
@@ -697,12 +718,7 @@ function fillWidthSelect(select, profile, width) {
 function newRadio(radios) {
   let n = 1;
   while (radios.some((radio) => radio.id === `r${n}`)) n += 1;
-  return {
-    id: `r${n}`,
-    profile: DEFAULT_RADIO.profile,
-    width: DEFAULT_RADIO.width,
-    capacity: DEFAULT_RADIO.capacity,
-  };
+  return { ...DEFAULT_RADIO, id: `r${n}` };
 }
 
 function buildRadioRow(radio, index) {
@@ -712,6 +728,9 @@ function buildRadioRow(radio, index) {
   profileSelect.append(...Object.entries(AP_PROFILES).map(([id, p]) => new Option(p.label, id)));
   profileSelect.value = radio.profile;
   fillWidthSelect(li.querySelector('[name="width"]'), radio.profile, radio.width);
+  const streamsSelect = li.querySelector('[name="streams"]');
+  streamsSelect.append(...STREAM_OPTIONS.map((n) => new Option(streamsLabel(n), String(n))));
+  streamsSelect.value = String(radio.streams);
   li.querySelector('[name="capacity"]').value = radio.capacity;
   li.querySelector('.remove-row').hidden = state.wlan.radios.length === 1;
   return li;
@@ -739,18 +758,22 @@ function setupWlan() {
       radio.profile = value;
       const widths = channelWidths(radio.profile);
       if (!widths.includes(radio.width)) radio.width = Math.max(...widths);
-      radio.capacity = plannedCapacity(radio.profile, radio.width);
+      radio.capacity = plannedCapacity(radio.profile, radio.width, radio.streams);
       fillWidthSelect(li.querySelector('[name="width"]'), radio.profile, radio.width);
       li.querySelector('[name="capacity"]').value = radio.capacity;
     } else if (name === 'width') {
       radio.width = Number(value);
-      radio.capacity = plannedCapacity(radio.profile, radio.width);
+      radio.capacity = plannedCapacity(radio.profile, radio.width, radio.streams);
+      li.querySelector('[name="capacity"]').value = radio.capacity;
+    } else if (name === 'streams') {
+      radio.streams = Number(value);
+      radio.capacity = plannedCapacity(radio.profile, radio.width, radio.streams);
       li.querySelector('[name="capacity"]').value = radio.capacity;
     } else if (name === 'capacity') {
       const text = value.trim();
       radio.capacity = text === '' ? 0 : Number(text.replace(',', '.')) || 0;
     }
-    // Profile and width change how radios are labelled in the client mix.
+    // Profile, width and streams change how radios are labelled in the client mix.
     if (name !== 'capacity') renderMix('wlan');
     update('wlan');
   });
@@ -858,6 +881,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     CLIENT_TYPES,
     AP_PROFILES,
+    STREAM_OPTIONS,
     DEFAULTS,
     toNumber,
     summarizeMix,

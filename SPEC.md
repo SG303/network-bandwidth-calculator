@@ -126,14 +126,17 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
     - `6g-6e`: "6 GHz – Wi-Fi 6E" — widths 20/40/80/160
     - `6g-be`: "6 GHz – Wi-Fi 7 (802.11be)" — widths 20/40/80/160/320
   - Dropdown "Channel width" (MHz), filtered by profile, **default 80**.
+  - Dropdown "Spatial streams": "2×2" (**default**) or "4×4", for every
+    profile.
   - Number field "Capacity (Mbit/s)" — auto-filled from the matrix below when
-    profile/width changes, but editable (override).
+    profile, width or streams change, but editable (override).
   - Remove button "✕" (accessible name "Remove radio"), hidden while only one
     radio exists. Button "+ Add radio", hidden at four radios. Removing a radio
     moves its clients to the first radio. New radios start from the default
     radio; ids stay stable so rows keep their assignment.
-  Shared helper text: "Planning values per band, standard and width — usable
-  throughput per radio, not the PHY data rate. Edit a value to override it."
+  Shared helper text: "Planning values per band, standard, width and streams —
+  usable throughput per radio, not the PHY data rate. Edit a value to override
+  it."
   With an invalid value: "<radio label>: enter a value greater than 0. Using
   the planning value of … until then." (plus `aria-invalid` on that field).
 - Slider "Concurrency (statistical)" 10–100%, step 5, **default 25%** — same
@@ -154,6 +157,19 @@ especially conservative because of interference and legacy clients.
 | 5g-ax   | 110    | 220    | 450    | 900     | —       |
 | 6g-6e   | 110    | 220    | 450    | 900     | —       |
 | 6g-be   | 120    | 240    | 500    | 1000    | 1900    |
+
+#### Spatial streams (2×2 / 4×4)
+
+The matrix is the 2×2 value. Most clients are 2×2, so a 4×4 radio does not
+carry more streams per client, and MU-MIMO is rarely effective in practice and
+is not counted. What a 4×4 radio does gain against 2×2 clients is about 3 dB
+of link margin (10·log10(4/2): receive combining over four chains on the
+uplink, transmit beamforming on the downlink; the downlink part can be capped
+by the EIRP limit, beacons are not beamformed). That is roughly one MCS step
+for clients away from the AP and fewer retransmissions; clients already at the
+top MCS gain nothing. Planning value for 4×4:
+`C_4x4 = round(C_2x2 × 1.15 / 10) × 10` (halves round up), e.g. 450 → 520,
+100 → 120, 1900 → 2190.
 
 ### Formulas
 
@@ -195,12 +211,16 @@ For the AP (one device carries all of its radios):
   "Capacity, limiting radio" with more than one radio)
 - "Avg. bandwidth per client" of the limiting radio (label becomes
   "Avg. per client, limiting radio" with more than one radio)
-- "Load by radio" table: radio (band + standard, channel width on a second
-  line), effective load and capacity in Mbit/s (unit in the column header),
+- "Load by radio" table: radio (band + standard, channel width and streams on
+  a second line, e.g. "@ 80 MHz, 4×4"), effective load and capacity in Mbit/s (unit in the column header),
   utilization with verdict badge ("idle" without clients), APs ("—" without
   clients)
 - Note: "Capacity is per radio. A dual-band AP (2.4 + 5/6 GHz) adds the
   capacity of its second radio."
+- Second note, only while at least one radio is 4×4: "4×4 with 2×2 clients:
+  about 3 dB more link margin, roughly one MCS step or 20% more range at the
+  cell edge, planned as +15% capacity. Many 4×4 APs need PoE+ (802.3at) or
+  802.3bt to run all radios at full power — check the datasheet."
 - "Breakdown by client type" table: count, Mbit/s, subtotal, total row
 
 ### Acceptance examples (must match exactly)
@@ -220,6 +240,9 @@ For the AP (one device carries all of its radios):
 4. Same two radios, 30 × stream-4k on the 2.4 GHz radio, 5 GHz idle,
    concurrency 25%:
    2.4 GHz: U = 375% → APs = 7; 5 GHz: idle (APs 0) → **APs = 7**, not 8.
+5. Default mix on 5g-ax @ 80 MHz, **4×4**, concurrency 25%:
+   C = 520, U = 7.9% → OK; APs = 1; avg. per client = 20.8 Mbit/s.
+   Example 2 with a 4×4 radio (2g @ 20 MHz): C = 60, U = 313% → APs = 6.
 
 ## UI / UX
 
@@ -231,9 +254,11 @@ For the AP (one device carries all of its radios):
   step 1), Mbit/s per client (number, min 0, step 0.1), remove button "✕"
   (accessible name "Remove row"). Button "+ Add client type". Same type may
   appear in multiple rows. WLAN rows add a "Radio" select (labels like
-  "5 GHz (Wi-Fi 6) @ 80 MHz") below the type select when the AP has more than
-  one radio; with a single radio only the type select is shown. The radio list
-  uses the same row pattern (profile, channel width, capacity, remove).
+  "5 GHz (Wi-Fi 6) @ 80 MHz, 2×2") below the type select when the AP has more
+  than one radio; with a single radio only the type select is shown. The radio
+  list uses two lines per radio with visible labels at every width: the
+  profile on the first line; channel width, spatial streams, capacity and
+  remove on the second.
 - Everything recalculates live on every input change (no calculate button).
 - Reset button per tab ("Reset") → restores the tab defaults and clears
   its localStorage entry.
@@ -280,7 +305,9 @@ Binding quality floor (everything else is the designer's intentional choice):
 - Client rows whose radio no longer exist move to the first radio (same happens
   when a radio is removed). At least one radio always exists, at most four.
 - States saved by older versions (one radio at the top level) migrate to a
-  single-radio AP automatically.
+  single-radio AP automatically. Radios saved without streams are 2×2 and keep
+  their capacity; an invalid streams value falls back to 2×2 with the matrix
+  capacity.
 - Very large numbers: format as Gbit/s where sensible; no layout breakage.
 
 ## Acceptance criteria

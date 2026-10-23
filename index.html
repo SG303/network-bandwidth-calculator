@@ -129,9 +129,6 @@
 
           <section class="mix radio-list" id="wlan-radios" aria-labelledby="wlan-radios-title">
             <h2 class="block-title" id="wlan-radios-title">AP radios</h2>
-            <div class="mix-head" aria-hidden="true">
-              <span>Radio</span><span>Channel width</span><span>Capacity (Mbit/s)</span>
-            </div>
             <ul class="mix-rows"></ul>
             <button class="button add-row" type="button">+ Add radio</button>
             <p class="help" id="wlan-radios-help"></p>
@@ -139,7 +136,7 @@
 
           <details class="assumptions">
             <summary>Assumptions &amp; notes</summary>
-            <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective load on a radio. That load is compared with the capacity of this radio — the throughput it actually carries, in practice roughly a third to half of its PHY data rate, and deliberately conservative on 2.4 GHz. It is not the data rate from the datasheet. Up to 60% utilization one AP is enough; above 85% it is overloaded. One AP carries all of its radios, so the recommendation is set by the radio with the highest requirement. All defaults are editable and deliberately conservative planning values.</p>
+            <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective load on a radio. That load is compared with the capacity of this radio — the throughput it actually carries, in practice roughly a third to half of its PHY data rate, and deliberately conservative on 2.4 GHz. It is not the data rate from the datasheet. Up to 60% utilization one AP is enough; above 85% it is overloaded. One AP carries all of its radios, so the recommendation is set by the radio with the highest requirement. A 4×4 radio is planned with 15% more capacity than 2×2: with 2×2 clients it gains about 3 dB of link margin (uplink receive combining, downlink beamforming), roughly one MCS step for clients away from the AP. It adds no streams for those clients, and MU-MIMO is not counted. All defaults are editable and deliberately conservative planning values.</p>
           </details>
 
           <button class="button reset" type="button" data-reset="wlan">Reset</button>
@@ -187,6 +184,7 @@
           </dl>
 
           <p class="plate-note">Capacity is per radio. A dual-band AP (2.4 + 5/6 GHz) adds the capacity of its second radio.</p>
+          <p class="plate-note" id="wlan-streams-note" hidden>4×4 with 2×2 clients: about 3 dB more link margin, roughly one MCS step or 20% more range at the cell edge, planned as +15% capacity. Many 4×4 APs need PoE+ (802.3at) or 802.3bt to run all radios at full power — check the datasheet.</p>
 
           <table class="breakdown breakdown--radio">
             <caption>Load by radio</caption>
@@ -252,6 +250,10 @@
       <label class="cell">
         <span class="cell-label">Channel width</span>
         <select name="width"></select>
+      </label>
+      <label class="cell">
+        <span class="cell-label">Spatial streams</span>
+        <select name="streams"></select>
       </label>
       <label class="cell">
         <span class="cell-label">Capacity (Mbit/s)</span>
