@@ -148,7 +148,11 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
     a value overrides it. Switching the mode converts the value so the planned
     SNR stays the same (RSSI = SNR + noise floor). A band change resets signal
     and noise floor to the band defaults; a width change clears an entered
-    noise floor.
+    noise floor. In SNR mode a width change also moves the entered SNR by
+    −3 dB per doubling of the width (+3 dB per halving), clamped to 0–60 dB,
+    because a wider channel collects more noise at the same received signal;
+    in RSSI mode the noise floor does that. An empty or invalid SNR is left
+    alone.
   - A link readout under the fields, in three steps: "SNR 25 dB" (source:
     "signal to noise", "−64 dBm over −89 dBm noise", "+3 dB for 4×4") →
     "MCS 7" ("64-QAM 5/6") → "432.4 Mbit/s" ("60% of 720.6 PHY, 2×2
@@ -279,11 +283,13 @@ reachable clients, none → no recommendation):
 
 - Port load `L = Σ_r min(E_r, C_r) / APs` (a radio never puts more on the
   wire than its capacity), ceiling `K = Σ_r C_r`
-- Port speed = smallest of 1 / 2.5 / 5 / 10 Gbit/s with `L / speed ≤ 0.85`
-  (utilization rounded to 0.1% as above). `L` above what 10 Gbit/s carries
-  at 85%: no recommendation, red note.
-- Capped hint when `K` exceeds the recommended speed.
-- Cabling for 100 m: 1 and 2.5 Gbit/s Cat5e or better, 5 Gbit/s Cat6 or
+- Minimum port speed = smallest of 1 / 2.5 / 5 / 10 Gbit/s with
+  `L / speed ≤ 0.85` (utilization rounded to 0.1% as above). `L` above what
+  10 Gbit/s carries at 85%: no recommendation, red note.
+- Recommended port speed (with room for peaks) = the larger of the minimum and
+  the smallest speed with `speed ≥ K`, capped at 10 Gbit/s. Its utilization is
+  `L / speed`. Capped hint when `K` still exceeds the recommended speed.
+- Cabling for 100 m (at the recommended speed): 1 and 2.5 Gbit/s Cat5e or better, 5 Gbit/s Cat6 or
   better, 10 Gbit/s Cat6a (Cat6 up to 55 m).
 
 ### Outputs (result cards, per-radio table, airtime table, breakdown table)
@@ -318,15 +324,21 @@ reachable clients, none → no recommendation):
   more airtime for the same data. The airtime of all clients on a radio adds
   up to its utilization."
 - "Switch port per AP": recommended speed (e.g. "1 Gbit/s") with badge
-  "Utilization X%" (zone colors as for the radios), note "Effective load per
-  AP: …" (prefixed "One port per AP, N in total. " with more than one AP),
-  "Cabling for 100 m: …", an amber note when the radios could deliver more
-  than the port carries — "The radios can deliver up to X per AP, more than
-  this port carries. The typical load fits, but single peaks are capped at the
-  port speed." — and a utilization bar per speed (1 / 2.5 / 5 / 10 Gbit/s)
-  with the recommended one highlighted. Red note without a possible speed:
-  "The load per AP exceeds what a 10 Gbit/s port carries – check the capacity
-  override."
+  "Utilization X%" (of the recommended speed, zone colors as for the radios),
+  note "Effective load per AP: …" (prefixed "One port per AP, N in total. "
+  with more than one AP), note "Minimum for the typical load: X (Y%
+  utilization)", "Cabling for 100 m: …", and a hint: when the recommendation
+  is above the minimum, "The radios can deliver up to X per AP. The minimum
+  carries the typical load; Y also leaves room for single peaks."; when both
+  are equal: "The radios can deliver up to X per AP, so Y also leaves room for
+  single peaks."; amber when
+  the radios could deliver more than even the recommendation carries — "The
+  radios can deliver up to X per AP, more than this port carries. The typical
+  load fits, but single peaks are capped at the port speed." Below: a
+  utilization bar per speed (1 / 2.5 / 5 / 10 Gbit/s) with the recommended one
+  highlighted and the minimum (if different) outlined. Red note without a
+  possible speed: "The load per AP exceeds what a 10 Gbit/s port carries –
+  check the capacity override."
 - Note: "Capacity is per radio. A dual-band AP (2.4 + 5/6 GHz) adds the
   capacity of its second radio."
 - Second note, only while at least one radio is 4×4: "4×4 with clients of
