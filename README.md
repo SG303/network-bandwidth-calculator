@@ -38,7 +38,9 @@ defaults.
   typical receiver decodes (MCS 7 needs 25 dB). Radio and client use their
   common standard, width and streams; 60% of that PHY rate is usable after
   contention, overhead and retries. Defaults: 25 dB on 5/6 GHz, 15 dB on
-  2.4 GHz, where interference costs more than the noise floor shows. A 4×4
+  2.4 GHz, where interference costs more than the noise floor shows. A wider
+  channel lowers the SNR by 3 dB per doubling of the width (in SNR mode the
+  entered value is adjusted when the width changes). A 4×4
   radio adds 3 dB for clients with fewer streams (about one MCS step);
   MU-MIMO is not counted. 6 GHz takes only Wi-Fi 6E/7 clients.
   Effective load = peak demand × concurrency (same slider and default 25% as
@@ -53,11 +55,12 @@ defaults.
   the **highest** single-radio requirement (never the sum), at least 1.
 - **AP switch port** (WLAN tab): each AP gets its own port. Its load is the
   effective load of all radios with clients, each capped at its capacity,
-  divided by the recommended AP count. The tool recommends the smallest of
-  1 / 2.5 / 5 / 10 Gbit/s that carries it at no more than 85% utilization and
-  names the copper cabling that reaches 100 m at that speed. If the radios
-  could deliver more than the port carries (sum of their capacities), a hint
-  says that single peaks are capped at the port speed.
+  divided by the recommended AP count. The tool shows two speeds: the
+  minimum, the smallest of 1 / 2.5 / 5 / 10 Gbit/s that carries this load at
+  no more than 85% utilization, and the recommendation, which is at least the
+  smallest speed that carries what the radios could deliver together (sum of
+  their capacities), so that single peaks are not capped at the port. It
+  names the copper cabling that reaches 100 m at the recommended speed.
 
 ## Tests
 

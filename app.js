@@ -207,18 +207,17 @@ function recommendUplink(effectiveMbps) {
   return { gbps, utilization, lowReserve: utilization > BORDERLINE_LIMIT };
 }
 
-// Smallest AP port speed that carries the load at no more than 85%
-// utilization. `ceiling` is what the radios could deliver at most; when it
-// exceeds the port speed, peaks are capped by the port.
+// Two AP port speeds. The minimum is the smallest that carries the typical
+// load at no more than 85% utilization. The recommendation also leaves room
+// for peaks: it is at least the smallest speed that carries `ceiling`, what
+// the radios could deliver at most, so a fast client is not capped by the port.
 function recommendApPort(loadMbps, ceilingMbps) {
-  const found = AP_PORT_CLASSES.find((c) => utilizationOf(loadMbps, c.gbps * 1000) <= BORDERLINE_LIMIT);
-  if (!found) return { gbps: null, utilization: null, cabling: null, capped: false };
-  return {
-    gbps: found.gbps,
-    utilization: utilizationOf(loadMbps, found.gbps * 1000),
-    cabling: found.cabling,
-    capped: ceilingMbps > found.gbps * 1000,
-  };
+  const byLoad = AP_PORT_CLASSES.find((c) => utilizationOf(loadMbps, c.gbps * 1000) <= BORDERLINE_LIMIT);
+  if (!byLoad) return { gbps: null, utilization: null, cabling: null, minimum: null, capped: false };
+  const byPeak = AP_PORT_CLASSES.find((c) => c.gbps * 1000 >= ceilingMbps) || AP_PORT_CLASSES[AP_PORT_CLASSES.length - 1];
+  const pick = byPeak.gbps > byLoad.gbps ? byPeak : byLoad;
+  const describe = (c) => ({ gbps: c.gbps, utilization: utilizationOf(loadMbps, c.gbps * 1000), cabling: c.cabling });
+  return { ...describe(pick), minimum: describe(byLoad), capped: ceilingMbps > pick.gbps * 1000 };
 }
 
 // Smallest common switch with 20% port reserve (integer math: size ≥ ports × 1.2).
@@ -309,6 +308,17 @@ function convertSignal(radio, mode) {
   const { snr, noise } = resolveSignal(radio);
   const value = mode === 'rssi' ? snr + noise : snr;
   return Math.round(value * 10) / 10;
+}
+
+// A wider channel collects more noise (+3 dB per doubling), so the same
+// received signal gives a lower SNR. In RSSI mode that follows from the noise
+// floor; in SNR mode the entered value is moved along with the width. An
+// invalid or empty value is left alone.
+function signalAfterWidthChange(radio, newWidth) {
+  if (radio.signalMode === 'rssi' || !inRange(radio.signal, SIGNAL_LIMITS.snr)) return radio.signal;
+  const shifted = radio.signal - 3 * Math.log2(newWidth / radio.width);
+  const [min, max] = SIGNAL_LIMITS.snr;
+  return Math.min(max, Math.max(min, Math.round(shifted * 10) / 10));
 }
 
 // PHY data rate in Mbit/s, or null where the standard defines no such MCS.
@@ -870,6 +880,9 @@ function renderApPort(result) {
 
   const count = result.aps > 1 ? `One port per AP, ${formatNumber(result.aps, 0)} in total. ` : '';
   $('wlan-port-note').textContent = port ? `${count}Effective load per AP: ${formatRateText(port.load)}` : '';
+  $('wlan-port-minimum').textContent = hasPort
+    ? `Minimum for the typical load: ${formatRateText(port.minimum.gbps * 1000)} (${formatPercent(port.minimum.utilization)} utilization)`
+    : '';
   $('wlan-port-cabling').textContent = hasPort ? `Cabling for 100 m: ${port.cabling}` : '';
 
   const hint = $('wlan-port-hint');
@@ -878,13 +891,20 @@ function renderApPort(result) {
   else if (port.capped) {
     setNote(hint, `The radios can deliver up to ${formatRateText(port.ceiling)} per AP, more than this port carries. `
       + 'The typical load fits, but single peaks are capped at the port speed.', 'warn');
-  } else setNote(hint, '');
+  } else if (port.gbps > port.minimum.gbps) {
+    setNote(hint, `The radios can deliver up to ${formatRateText(port.ceiling)} per AP. `
+      + `The minimum carries the typical load; ${formatRateText(port.gbps * 1000)} also leaves room for single peaks.`);
+  } else {
+    setNote(hint, `The radios can deliver up to ${formatRateText(port.ceiling)} per AP, so ${formatRateText(port.gbps * 1000)} `
+      + 'also leaves room for single peaks.');
+  }
 
   $('wlan-port-compare').querySelectorAll('.compare-row').forEach((row, i) => {
     const gbps = AP_PORT_CLASSES[i].gbps;
     setScale(row.querySelector('.scale'), port ? utilizationOf(port.load, gbps * 1000) : null);
     row.querySelector('.compare-value').textContent = port ? formatPercent(utilizationOf(port.load, gbps * 1000)) : '—';
     row.classList.toggle('is-recommended', hasPort && port.gbps === gbps);
+    row.classList.toggle('is-minimum', hasPort && port.minimum.gbps === gbps && port.gbps !== gbps);
   });
 }
 
@@ -1284,15 +1304,21 @@ function setupWlan() {
       const oldBand = profileOf(radio.profile).band;
       radio.profile = value;
       const widths = channelWidths(radio.profile);
+      const oldWidth = radio.width;
       if (!widths.includes(radio.width)) radio.width = Math.max(...widths);
       radio.capacity = null;
-      // A new band brings its own default SNR and noise floor.
+      // A new band brings its own default SNR and noise floor; within a band a
+      // narrower or wider channel moves the SNR.
       if (profileOf(radio.profile).band !== oldBand) {
         radio.noise = null;
         radio.signal = defaultSignal(radio.profile, radio.width, radio.signalMode);
+      } else if (radio.width !== oldWidth) {
+        radio.signal = signalAfterWidthChange({ ...radio, width: oldWidth }, radio.width);
       }
       syncRadioRow(li, radio);
     } else if (name === 'width' || name === 'streams') {
+      // The SNR moves with the width (SNR mode); an RSSI stays as entered.
+      if (name === 'width') radio.signal = signalAfterWidthChange(radio, Number(value));
       radio[name] = Number(value);
       radio.capacity = null;
       // A noise floor entered by hand belongs to the old width.
@@ -1439,6 +1465,7 @@ if (typeof module !== 'undefined' && module.exports) {
     defaultSignal,
     resolveSignal,
     convertSignal,
+    signalAfterWidthChange,
     phyRate,
     referenceClient,
     linkFor,

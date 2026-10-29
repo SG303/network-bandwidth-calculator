@@ -114,6 +114,21 @@ test('RSSI mode: SNR = RSSI − noise floor, auto or entered', () => {
   assert.equal(manual.noiseAuto, false);
 });
 
+test('SNR mode: a wider channel moves the entered SNR by 3 dB per doubling', () => {
+  const shift = (from, to, signal = 25, extra = {}) =>
+    app.signalAfterWidthChange(radio({ width: from, signal, ...extra }), to);
+  assert.equal(shift(20, 40), 22);
+  assert.equal(shift(20, 80), 19);
+  assert.equal(shift(80, 20), 31, 'narrower: +3 dB per halving');
+  assert.equal(shift(80, 160), 22);
+  assert.equal(shift(80, 80), 25);
+  assert.equal(shift(20, 320, 5), 0, 'clamped at 0 dB');
+  assert.equal(shift(320, 20, 55), 60, 'clamped at 60 dB');
+  assert.equal(shift(80, 40, 25, { signalMode: 'rssi', signal: -64 }), -64, 'an RSSI stays as entered');
+  assert.equal(shift(80, 40, null), null);
+  assert.equal(shift(80, 40, 99), 99, 'invalid values are left alone');
+});
+
 test('RSSI mode: the same RSSI gives 3 dB less SNR per doubling of the width', () => {
   const snrAt = (width) => app.resolveSignal(radio({ profile: '6g-be', signalMode: 'rssi', signal: -60, width })).snr;
   assert.deepEqual([20, 40, 80, 160, 320].map(snrAt), [35, 32, 29, 26, 23]);
@@ -521,6 +536,7 @@ test('acceptance 7: AP switch port', () => {
   assert.equal(app.formatPercent(r.port.utilization), '4.1%');
   assert.equal(r.port.cabling, 'Cat5e or better');
   assert.equal(r.port.capped, false);
+  assert.equal(r.port.minimum.gbps, 1);
 
   // 6 GHz Wi-Fi 7 @ 320 MHz, 4×4: radio capacity 2075.3 Mbit/s, effective 1200.
   const r7 = radio({ profile: '6g-be', width: 320, streams: 4 });
@@ -533,18 +549,22 @@ test('acceptance 7: AP switch port', () => {
   assert.equal(app.formatPercent(big.port.utilization), '48.0%');
   assert.equal(big.port.capped, false);
 
-  // The same radio with a light mix: 1 Gbit/s carries the load, the radio could do more.
+  // The same radio with a light mix: 1 Gbit/s carries the load, but the radio
+  // could deliver 2075.3, so 2.5 Gbit/s is recommended and 1 Gbit/s the minimum.
   const light = wlan([row('stream-4k', 10, 25, { client: 'wifi7', clientStreams: 2 })], [r7], 50);
-  assert.equal(light.port.gbps, 1);
-  assert.equal(light.port.capped, true);
+  assert.equal(light.port.minimum.gbps, 1);
+  assert.equal(light.port.gbps, 2.5);
+  assert.equal(light.port.capped, false);
 
-  // Manual capacities: 5 and 10 Gbit/s.
-  assert.equal(wlan(mix.map((m) => ({ ...m, count: 240 })), [radio({ capacity: 6000 })], 50).port.gbps, 5);
+  // Manual capacities: 6000 Mbit/s carries 3000 at 5 Gbit/s (minimum) but peaks need 10.
+  const manual = wlan(mix.map((m) => ({ ...m, count: 240 })), [radio({ capacity: 6000 })], 50).port;
+  assert.equal(manual.minimum.gbps, 5);
+  assert.equal(manual.gbps, 10);
   assert.equal(wlan(mix.map((m) => ({ ...m, count: 480 })), [radio({ capacity: 12000 })], 50).port.gbps, 10);
 });
 
-test('AP port: smallest speed at no more than 85% utilization', () => {
-  const pick = (load) => app.recommendApPort(load, 0).gbps;
+test('AP port: minimum is the smallest speed at no more than 85% utilization', () => {
+  const pick = (load) => app.recommendApPort(load, 0).minimum?.gbps ?? null;
   assert.equal(pick(850), 1);
   assert.equal(pick(860), 2.5);
   assert.equal(pick(2125), 2.5);
@@ -553,8 +573,23 @@ test('AP port: smallest speed at no more than 85% utilization', () => {
   assert.equal(pick(4300), 10);
   assert.equal(pick(8500), 10);
   assert.equal(pick(8600), null);
-  assert.equal(app.recommendApPort(1000, 2600).capped, true);
-  assert.equal(app.recommendApPort(2000, 2500).capped, false);
+  assert.equal(app.recommendApPort(8600, 0).gbps, null);
+});
+
+test('AP port: the recommendation also carries what the radios could deliver', () => {
+  const gbps = (load, ceiling) => app.recommendApPort(load, ceiling).gbps;
+  assert.equal(gbps(100, 637), 1, 'ceiling fits 1 Gbit/s');
+  assert.equal(gbps(100, 1000), 1, 'exactly 1 Gbit/s');
+  assert.equal(gbps(100, 1001), 2.5);
+  assert.equal(gbps(100, 2600), 5);
+  assert.equal(gbps(100, 6000), 10);
+  assert.equal(gbps(1000, 100), 2.5, 'never below the minimum');
+  const big = app.recommendApPort(100, 12000);
+  assert.equal(big.gbps, 10);
+  assert.equal(big.capped, true, 'the ceiling exceeds even 10 Gbit/s');
+  assert.equal(app.recommendApPort(100, 2600).capped, false);
+  assert.equal(app.formatPercent(app.recommendApPort(100, 2600).utilization), '2.0%', 'utilization of the recommended speed');
+  assert.equal(app.recommendApPort(100, 2600).minimum.gbps, 1);
 });
 
 test('AP port: one port per AP, load capped by radio capacity, none without clients', () => {

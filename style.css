@@ -870,6 +870,11 @@ input[type="range"] {
   color: var(--aqua-deep);
 }
 
+.compare-row.is-minimum .compare-label {
+  outline: 1px dashed var(--aqua-deep);
+  outline-offset: -1px;
+}
+
 /* AP switch port: recommendation first, then the comparison. */
 .port {
   display: grid;
