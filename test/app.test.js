@@ -14,6 +14,7 @@ const {
 } = app;
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
+const clean = (n) => Math.round(n * 1e9) / 1e9;
 const near = (actual, expected, tolerance, message) => {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${message}: expected ${expected} ± ${tolerance}, got ${actual}`);
 };
@@ -511,6 +512,64 @@ test('acceptance 6: RSSI −67 dBm on 5 GHz shows the cost of wide channels', ()
 /* ------------------------------------------------------------------ *
  * Persistence and migration
  * ------------------------------------------------------------------ */
+
+test('acceptance 7: AP switch port', () => {
+  const r = app.calcWlan(clone(DEFAULTS.wlan));
+  assert.equal(r.port.load, 41.25);
+  assert.equal(r.port.ceiling, 432.4);
+  assert.equal(r.port.gbps, 1);
+  assert.equal(app.formatPercent(r.port.utilization), '4.1%');
+  assert.equal(r.port.cabling, 'Cat5e or better');
+  assert.equal(r.port.capped, false);
+
+  // 6 GHz Wi-Fi 7 @ 320 MHz, 4×4: radio capacity 2075.3 Mbit/s, effective 1200.
+  const r7 = radio({ profile: '6g-be', width: 320, streams: 4 });
+  const mix = [row('stream-4k', 96, 25, { client: 'wifi7', clientStreams: 2 })];
+  const big = wlan(mix, [r7], 50);
+  assert.equal(big.capacity, 2075.3);
+  assert.equal(big.aps, 1);
+  assert.equal(big.port.load, 1200);
+  assert.equal(big.port.gbps, 2.5);
+  assert.equal(app.formatPercent(big.port.utilization), '48.0%');
+  assert.equal(big.port.capped, false);
+
+  // The same radio with a light mix: 1 Gbit/s carries the load, the radio could do more.
+  const light = wlan([row('stream-4k', 10, 25, { client: 'wifi7', clientStreams: 2 })], [r7], 50);
+  assert.equal(light.port.gbps, 1);
+  assert.equal(light.port.capped, true);
+
+  // Manual capacities: 5 and 10 Gbit/s.
+  assert.equal(wlan(mix.map((m) => ({ ...m, count: 240 })), [radio({ capacity: 6000 })], 50).port.gbps, 5);
+  assert.equal(wlan(mix.map((m) => ({ ...m, count: 480 })), [radio({ capacity: 12000 })], 50).port.gbps, 10);
+});
+
+test('AP port: smallest speed at no more than 85% utilization', () => {
+  const pick = (load) => app.recommendApPort(load, 0).gbps;
+  assert.equal(pick(850), 1);
+  assert.equal(pick(860), 2.5);
+  assert.equal(pick(2125), 2.5);
+  assert.equal(pick(2200), 5);
+  assert.equal(pick(4250), 5);
+  assert.equal(pick(4300), 10);
+  assert.equal(pick(8500), 10);
+  assert.equal(pick(8600), null);
+  assert.equal(app.recommendApPort(1000, 2600).capped, true);
+  assert.equal(app.recommendApPort(2000, 2500).capped, false);
+});
+
+test('AP port: one port per AP, load capped by radio capacity, none without clients', () => {
+  const r2 = radio({ profile: '2g', width: 20 });
+  const heavy = wlan([row('stream-4k', 30, 25)], [r2], 25);
+  assert.ok(heavy.aps > 1);
+  assert.equal(heavy.port.load, clean(heavy.radios[0].capacity / heavy.aps));
+  assert.ok(heavy.port.load <= heavy.radios[0].capacity);
+
+  const idle = wlan([row('stream-4k', 30, 25, { radio: 'r2' })], [radio(), { ...radio({ profile: '2g', width: 20 }), id: 'r2' }], 25);
+  assert.equal(idle.radios[0].clients, 0);
+  assert.equal(idle.port.ceiling, idle.radios[1].capacity, 'idle radios add nothing');
+
+  assert.equal(wlan([], [radio()]).port, null);
+});
 
 test('migration: saved matrix capacities become auto, real overrides survive', () => {
   const old = {

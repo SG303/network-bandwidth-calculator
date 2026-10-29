@@ -274,6 +274,18 @@ For the AP (one device carries all of its radios):
 - Totals: `D` and `E` over all rows (including clients that cannot connect),
   `N = Σ N_r`
 
+AP switch port (each AP gets its own port; `r` over the radios with
+reachable clients, none → no recommendation):
+
+- Port load `L = Σ_r min(E_r, C_r) / APs` (a radio never puts more on the
+  wire than its capacity), ceiling `K = Σ_r C_r`
+- Port speed = smallest of 1 / 2.5 / 5 / 10 Gbit/s with `L / speed ≤ 0.85`
+  (utilization rounded to 0.1% as above). `L` above what 10 Gbit/s carries
+  at 85%: no recommendation, red note.
+- Capped hint when `K` exceeds the recommended speed.
+- Cabling for 100 m: 1 and 2.5 Gbit/s Cat5e or better, 5 Gbit/s Cat6 or
+  better, 10 Gbit/s Cat6a (Cat6 up to 55 m).
+
 ### Outputs (result cards, per-radio table, airtime table, breakdown table)
 
 - "Utilization" (hero) = `U` of the limiting radio, with colored CSS bar and %
@@ -305,6 +317,16 @@ For the AP (one device carries all of its radios):
   connect show "—" and a red "No link" badge. Note below: "Slower clients need
   more airtime for the same data. The airtime of all clients on a radio adds
   up to its utilization."
+- "Switch port per AP": recommended speed (e.g. "1 Gbit/s") with badge
+  "Utilization X%" (zone colors as for the radios), note "Effective load per
+  AP: …" (prefixed "One port per AP, N in total. " with more than one AP),
+  "Cabling for 100 m: …", an amber note when the radios could deliver more
+  than the port carries — "The radios can deliver up to X per AP, more than
+  this port carries. The typical load fits, but single peaks are capped at the
+  port speed." — and a utilization bar per speed (1 / 2.5 / 5 / 10 Gbit/s)
+  with the recommended one highlighted. Red note without a possible speed:
+  "The load per AP exceeds what a 10 Gbit/s port carries – check the capacity
+  override."
 - Note: "Capacity is per radio. A dual-band AP (2.4 + 5/6 GHz) adds the
   capacity of its second radio."
 - Second note, only while at least one radio is 4×4: "4×4 with clients of

@@ -51,6 +51,13 @@ defaults.
   0.1%). Recommended APs per radio = ⌈utilization / 60%⌉, i.e. ⌈effective
   demand / (60% × capacity)⌉. Because one AP carries all of its radios, the AP count is
   the **highest** single-radio requirement (never the sum), at least 1.
+- **AP switch port** (WLAN tab): each AP gets its own port. Its load is the
+  effective load of all radios with clients, each capped at its capacity,
+  divided by the recommended AP count. The tool recommends the smallest of
+  1 / 2.5 / 5 / 10 Gbit/s that carries it at no more than 85% utilization and
+  names the copper cabling that reaches 100 m at that speed. If the radios
+  could deliver more than the port carries (sum of their capacities), a hint
+  says that single peaks are capped at the port speed.
 
 ## Tests
 
