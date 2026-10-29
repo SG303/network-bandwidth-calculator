@@ -955,16 +955,22 @@ input[type="range"] {
   white-space: nowrap;
 }
 
-/* Airtime table: client type on top, its link on a quieter second line. */
-.airtime-type {
+/* Client table: client type on top, its mix and link on a quieter second
+   line; the MCS sits under the rate it explains. */
+.client-type {
   display: block;
 }
 
-.breakdown--airtime .radio-meta {
+.client-meta,
+.cell-sub {
   display: block;
   font-size: 0.8125rem;
   font-weight: 400;
-  white-space: normal;
+  color: var(--muted);
+}
+
+.cell-sub {
+  font-family: var(--font-text);
 }
 
 /* Percentage and verdict stay on one line when there is room and stack when not. */
