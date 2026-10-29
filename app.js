@@ -422,13 +422,14 @@ function calcRadio(rows, radio, concurrency) {
     if (row.radio !== radio.id) return;
     const count = Math.floor(toNumber(row.count));
     if (count === 0) return;
-    const entry = { index, radio: radio.id, type: row.type, count, client: row.client, clientStreams: row.clientStreams };
+    const mbps = toNumber(row.mbps);
+    const demand = clean(count * mbps);
+    const entry = { index, radio: radio.id, type: row.type, count, mbps, demand, client: row.client, clientStreams: row.clientStreams };
     const link = linkFor(radio, signal.snr, row.client, row.clientStreams);
     if (!link) {
       unreachable.push(entry);
       return;
     }
-    const demand = clean(count * toNumber(row.mbps));
     const effective = clean((demand * concurrency) / 100);
     const rate = manual > 0 ? manual : link.rate;
     links.push({ ...entry, row, link, demand, effective, rate, airtime: effective / rate });
@@ -864,10 +865,9 @@ function renderWlan() {
   $('wlan-streams-note').hidden = !r.radios.some((x) => x.streams === 4);
 
   renderRadioTable(r);
-  renderAirtimeTable(r);
+  renderClientTable(r);
   renderRadioStatus(r);
   renderClientStatus(r);
-  renderBreakdown('wlan', r);
 }
 
 function renderApPort(result) {
@@ -980,9 +980,13 @@ function renderRadioTable(result) {
   }
 }
 
-function renderAirtimeTable(result) {
-  const body = $('wlan-airtime');
+// One row per client type: what it asks for (peak demand), the rate its link
+// gets and the airtime that costs on its radio.
+function renderClientTable(result) {
+  const body = $('wlan-clients');
+  const foot = $('wlan-clients-total');
   body.replaceChildren();
+  foot.replaceChildren();
   const entries = [...result.links, ...result.unreachable].sort((a, b) => a.index - b.index);
   if (entries.length === 0) {
     const td = body.insertRow().insertCell();
@@ -995,30 +999,43 @@ function renderAirtimeTable(result) {
   for (const entry of entries) {
     const tr = body.insertRow();
     const radio = result.radios.find((x) => x.id === entry.radio);
+    const link = entry.link;
     const th = document.createElement('th');
     th.scope = 'row';
     const name = document.createElement('span');
-    name.className = 'airtime-type';
+    name.className = 'client-type';
     name.textContent = TYPE_BY_ID[entry.type].label;
     const meta = document.createElement('span');
-    meta.className = 'radio-meta';
+    meta.className = 'client-meta';
+    const width = link ? ` at ${link.width} MHz` : '';
     const where = single ? '' : ` on ${profileOf(radio.profile).short}`;
-    const link = entry.link;
-    meta.textContent = link
-      ? `${formatNumber(entry.count, 0)} × ${clientLabel(entry.client, entry.clientStreams)} at ${link.width} MHz${where}`
-      : `${formatNumber(entry.count, 0)} × ${clientLabel(entry.client, entry.clientStreams)}${where}`;
+    meta.textContent = `${formatNumber(entry.count, 0)} × ${formatRateText(entry.mbps)}, `
+      + `${clientLabel(entry.client, entry.clientStreams)}${width}${where}`;
     th.append(name, meta);
     tr.append(th);
+    tr.insertCell().textContent = formatNumber(entry.demand);
     if (!link) {
-      tr.insertCell().textContent = '—';
       tr.insertCell().textContent = '—';
       verdictCell(tr, '', 'No link', 'crit');
       continue;
     }
-    tr.insertCell().textContent = radio.capacityManual ? '—' : String(link.mcs);
-    tr.insertCell().textContent = formatNumber(entry.rate);
+    const rate = tr.insertCell();
+    const mcs = document.createElement('span');
+    mcs.className = 'cell-sub';
+    mcs.textContent = radio.capacityManual ? 'manual' : `MCS ${link.mcs}`;
+    rate.append(formatNumber(entry.rate), mcs);
     tr.insertCell().textContent = formatPercent(roundRatio(entry.airtime));
   }
+
+  // The airtime only adds up to a utilization within one radio.
+  const tr = foot.insertRow();
+  const th = document.createElement('th');
+  th.scope = 'row';
+  th.textContent = `Total, ${formatNumber(result.clients, 0)} clients`;
+  tr.append(th);
+  tr.insertCell().textContent = formatNumber(result.peak);
+  tr.insertCell();
+  tr.insertCell().textContent = single ? formatPercent(result.utilization) : '';
 }
 
 function setInvalid(input, invalid) {

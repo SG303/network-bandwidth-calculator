@@ -215,28 +215,20 @@
             <tbody id="wlan-radio-table"></tbody>
           </table>
 
-          <table class="breakdown breakdown--radio breakdown--airtime">
-            <caption>Airtime by client type</caption>
+          <table class="breakdown breakdown--radio breakdown--clients">
+            <caption>Clients</caption>
             <thead>
               <tr>
                 <th scope="col">Client type</th>
-                <th scope="col">MCS</th>
+                <th scope="col">Peak<br><span class="th-unit">Mbit/s</span></th>
                 <th scope="col">Rate<br><span class="th-unit">Mbit/s</span></th>
                 <th scope="col">Airtime<br><span class="th-unit">of its radio</span></th>
               </tr>
             </thead>
-            <tbody id="wlan-airtime"></tbody>
+            <tbody id="wlan-clients"></tbody>
+            <tfoot id="wlan-clients-total"></tfoot>
           </table>
-          <p class="plate-note">Slower clients need more airtime for the same data. The airtime of all clients on a radio adds up to its utilization.</p>
-
-          <table class="breakdown">
-            <caption>Breakdown by client type</caption>
-            <thead>
-              <tr><th scope="col">Client type</th><th scope="col">Count</th><th scope="col">Mbit/s</th><th scope="col">Subtotal</th></tr>
-            </thead>
-            <tbody id="wlan-breakdown"></tbody>
-            <tfoot id="wlan-breakdown-total"></tfoot>
-          </table>
+          <p class="plate-note">Peak is count × Mbit/s per client, rate is what one client's link delivers. Slower clients need more airtime for the same data; the airtime of all clients on a radio adds up to its utilization.</p>
         </div>
       </section>
     </main>

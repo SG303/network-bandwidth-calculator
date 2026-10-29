@@ -330,12 +330,15 @@ reachable clients, none → no recommendation):
   "SNR 25 dB" or "manual capacity"), effective load and capacity in Mbit/s
   (unit in the column header), utilization with verdict badge ("idle" without
   clients), APs ("—" without clients)
-- "Airtime by client type" table: client type with "20 × Wi-Fi 6, 2×2 at
-  80 MHz" (plus "on <radio>" with several radios) on a second line, MCS ("—"
-  with an override), rate (Mbit/s), airtime of its radio. Clients that cannot
-  connect show "—" and a red "No link" badge. Note below: "Slower clients need
-  more airtime for the same data. The airtime of all clients on a radio adds
-  up to its utilization."
+- "Clients" table, one row per client type: the type with "20 × 2 Mbit/s,
+  Wi-Fi 6, 2×2 at 80 MHz" (plus "on <radio>" with several radios) on a second
+  line; peak demand (count × Mbit/s); rate in Mbit/s with "MCS n" below it
+  ("manual" with an override); airtime of its radio. Clients that cannot
+  connect show "—" as rate and a red "No link" badge. Total row: "Total, N
+  clients", the total peak demand and, with a single radio, its utilization.
+  Note below: "Peak is count × Mbit/s per client, rate is what one client's
+  link delivers. Slower clients need more airtime for the same data; the
+  airtime of all clients on a radio adds up to its utilization."
 - "Switch port per AP": recommended speed (e.g. "1 Gbit/s") with badge
   "Utilization X%" (of the recommended speed, zone colors as for the radios),
   note "Effective load per AP: …" (prefixed "One port per AP, N in total. "
@@ -358,7 +361,6 @@ reachable clients, none → no recommendation):
   fewer streams: 3 dB more link margin is added to their SNR, roughly one MCS
   step or 20% more range at the cell edge. Many 4×4 APs need PoE+ (802.3at)
   or 802.3bt to run all radios at full power — check the datasheet."
-- "Breakdown by client type" table: count, Mbit/s, subtotal, total row
 
 ### Acceptance examples (must match exactly)
 

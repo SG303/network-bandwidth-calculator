@@ -404,6 +404,8 @@ test('slow clients take more airtime than their data suggests (rate anomaly)', (
   // The airtime of the rows adds up to the utilization.
   const sum = mixed.links.reduce((s, l) => s + l.airtime, 0);
   near(mixed.utilization, sum, 0.0005, 'airtime sum');
+  // Every row carries its peak demand for the client table.
+  assert.deepEqual(mixed.links.map((l) => [l.mbps, l.demand]), [[20, 200], [20, 200]]);
 });
 
 test('clients that cannot connect are reported and not counted on the radio', () => {
@@ -413,6 +415,7 @@ test('clients that cannot connect are reported and not counted on the radio', ()
   assert.equal(r.radios[0].clients, 0);
   assert.equal(r.utilization, 0);
   assert.equal(r.peak, 165, 'the demand still shows in the totals');
+  assert.deepEqual(r.unreachable.map((e) => e.demand), [40, 125], 'and per client type');
   const fixed = wlan(rows.map((x) => ({ ...x, client: 'wifi6e' })), [radio({ profile: '6g-6e' })]);
   assert.equal(fixed.unreachable.length, 0);
   assert.equal(fixed.radios[0].clients, 25);
