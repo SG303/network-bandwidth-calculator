@@ -136,8 +136,8 @@
 
           <details class="assumptions">
             <summary>Assumptions &amp; notes</summary>
-            <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective load on a radio. The capacity follows from the signal: the SNR (entered directly, or as RSSI minus the noise floor, which rises 3 dB per doubling of the channel width) selects the highest MCS a typical receiver decodes. The client gets the common standard, width and streams of both sides, and 60% of that PHY rate is usable after contention, overhead and retries. 2.4 GHz plans with a lower SNR because interference costs it more than its noise floor shows. Each client type takes the airtime its demand needs at its rate, and the airtime of a radio's clients is its utilization. Up to 60% one AP is enough; above 85% it is overloaded. One AP carries all of its radios, so the radio with the highest requirement sets the recommendation. The switch port per AP is the smallest of 1 / 2.5 / 5 / 10 Gbit/s that carries the effective load of one AP (radios capped at their capacity) at up to 85% utilization. A 4×4 radio adds 3 dB of link margin for clients with fewer streams; MU-MIMO is not counted.</p>
-            <p>The SNR per MCS is a typical planning value; receivers differ by a few dB. All defaults are editable, and a measured capacity can replace the derived one.</p>
+            <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective load on a radio. The capacity follows from the signal: the SNR (entered directly, or as RSSI minus the noise floor, which rises 3 dB per doubling of the channel width) selects the highest MCS a typical receiver decodes. The client gets the common standard, width and streams of both sides, and 60% of that PHY rate is usable after contention, overhead and retries. 2.4 GHz plans with a lower SNR because interference costs it more than its noise floor shows. Each client type takes the airtime its demand needs at its rate, and the airtime of a radio's clients is its utilization. Up to 60% one AP is enough; above 85% it is overloaded. One AP carries all of its radios, so the radio with the highest requirement sets the recommendation. The switch port per AP is recommended with room for peaks: at least the smallest of 1 / 2.5 / 5 / 10 Gbit/s that carries everything its radios can deliver together. The minimum for the typical load (the effective load of one AP, radios capped at their capacity, at up to 85% utilization) is shown below it. A 4×4 radio adds 3 dB of link margin for clients with fewer streams; MU-MIMO is not counted.</p>
+            <p>The SNR per MCS is a typical planning value; receivers differ by a few dB. A wider channel collects more noise: in SNR mode the entered SNR drops by 3 dB per doubling of the width (check the field after changing it), in RSSI mode the noise floor does that. All defaults are editable, and a measured capacity can replace the derived one.</p>
           </details>
 
           <button class="button reset" type="button" data-reset="wlan">Reset</button>
@@ -192,6 +192,7 @@
               <span class="badge" id="wlan-port-badge" hidden></span>
             </div>
             <p class="reading-note" id="wlan-port-note"></p>
+            <p class="reading-note" id="wlan-port-minimum"></p>
             <p class="reading-note" id="wlan-port-cabling"></p>
             <p class="status-note" id="wlan-port-hint" hidden></p>
             <ul class="compare-list" id="wlan-port-compare"></ul>
