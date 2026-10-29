@@ -29,22 +29,35 @@ defaults.
   (1 Gbit/s baseline). Switch size = smallest of 8 / 12 / 24 / 28 / 48 / 52
   ports with 20% reserve; above 52 ports, several 48-port switches.
 - **WLAN**: each AP is described by its radios (1–4: band/standard, channel
-  width, spatial streams, capacity) and every client row is assigned to one of
-  them.
-  Effective load per radio = peak demand × concurrency (same slider and
-  default 25% as the wired tab), compared with the capacity of this
-  radio: the usable aggregate throughput it really carries for all
-  clients of that radio, in practice roughly a third to half of the PHY data
-  rate and not the datasheet value, taken from a matrix per band/standard and
-  channel width and editable as an override. The matrix is for 2×2 radios; a
-  4×4 radio is planned with +15%, because against 2×2 clients it gains about
-  3 dB of link margin (roughly one MCS step away from the AP) but no extra
-  streams, and MU-MIMO is not counted.
+  width, spatial streams, signal) and every client row is assigned to one of
+  them, with its own client capability (Wi-Fi 4/5/6/6E/7, 1×1/2×2/4×4,
+  preset by the client type).
+  The capacity follows from the signal: the SNR, entered directly or as
+  RSSI minus the noise floor (−95 dBm at 20 MHz on 5/6 GHz, −90 dBm on
+  2.4 GHz, +3 dB per doubling of the width), selects the highest MCS a
+  typical receiver decodes (MCS 7 needs 25 dB). Radio and client use their
+  common standard, width and streams; 60% of that PHY rate is usable after
+  contention, overhead and retries. Defaults: 25 dB on 5/6 GHz, 15 dB on
+  2.4 GHz, where interference costs more than the noise floor shows. A 4×4
+  radio adds 3 dB for clients with fewer streams (about one MCS step);
+  MU-MIMO is not counted. 6 GHz takes only Wi-Fi 6E/7 clients.
+  Effective load = peak demand × concurrency (same slider and default 25% as
+  the wired tab). Each client row needs airtime = its load / its rate, and
+  the airtime of a radio's clients is its utilization, so slow clients weigh
+  more than their data rate suggests. A measured capacity can replace the
+  derived one per radio.
 - **Verdict thresholds**: utilization ≤ 60% is OK, 60–85% borderline,
   above 85% overloaded, judged on the utilization as displayed (rounded to
   0.1%). Recommended APs per radio = ⌈utilization / 60%⌉, i.e. ⌈effective
   demand / (60% × capacity)⌉. Because one AP carries all of its radios, the AP count is
   the **highest** single-radio requirement (never the sum), at least 1.
+
+## Tests
+
+`node --test` runs the calculation tests in `test/` with Node's built-in test
+runner (Node 18+, no dependencies): PHY rates against the 802.11 rate tables,
+the acceptance examples from `SPEC.md`, invariants over every
+radio/client/SNR combination and the migration of saved states.
 
 ## Disclaimer
 

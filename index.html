@@ -136,7 +136,8 @@
 
           <details class="assumptions">
             <summary>Assumptions &amp; notes</summary>
-            <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective load on a radio. That load is compared with the capacity of this radio — the throughput it actually carries, in practice roughly a third to half of its PHY data rate, and deliberately conservative on 2.4 GHz. It is not the data rate from the datasheet. Up to 60% utilization one AP is enough; above 85% it is overloaded. One AP carries all of its radios, so the recommendation is set by the radio with the highest requirement. A 4×4 radio is planned with 15% more capacity than 2×2: with 2×2 clients it gains about 3 dB of link margin (uplink receive combining, downlink beamforming), roughly one MCS step for clients away from the AP. It adds no streams for those clients, and MU-MIMO is not counted. All defaults are editable and deliberately conservative planning values.</p>
+            <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective load on a radio. The capacity follows from the signal: the SNR (entered directly, or as RSSI minus the noise floor, which rises 3 dB per doubling of the channel width) selects the highest MCS a typical receiver decodes. The client gets the common standard, width and streams of both sides, and 60% of that PHY rate is usable after contention, overhead and retries. 2.4 GHz plans with a lower SNR because interference costs it more than its noise floor shows. Each client type takes the airtime its demand needs at its rate, and the airtime of a radio's clients is its utilization. Up to 60% one AP is enough; above 85% it is overloaded. One AP carries all of its radios, so the radio with the highest requirement sets the recommendation. A 4×4 radio adds 3 dB of link margin for clients with fewer streams; MU-MIMO is not counted.</p>
+            <p>The SNR per MCS is a typical planning value; receivers differ by a few dB. All defaults are editable, and a measured capacity can replace the derived one.</p>
           </details>
 
           <button class="button reset" type="button" data-reset="wlan">Reset</button>
@@ -162,6 +163,7 @@
             </div>
             <p class="badge badge--verdict" id="wlan-verdict" hidden></p>
             <p class="status-note" id="wlan-note" hidden></p>
+            <p class="status-note" id="wlan-link-note" hidden></p>
           </div>
 
           <dl class="readings">
@@ -184,7 +186,7 @@
           </dl>
 
           <p class="plate-note">Capacity is per radio. A dual-band AP (2.4 + 5/6 GHz) adds the capacity of its second radio.</p>
-          <p class="plate-note" id="wlan-streams-note" hidden>4×4 with 2×2 clients: about 3 dB more link margin, roughly one MCS step or 20% more range at the cell edge, planned as +15% capacity. Many 4×4 APs need PoE+ (802.3at) or 802.3bt to run all radios at full power — check the datasheet.</p>
+          <p class="plate-note" id="wlan-streams-note" hidden>4×4 with clients of fewer streams: 3 dB more link margin is added to their SNR, roughly one MCS step or 20% more range at the cell edge. Many 4×4 APs need PoE+ (802.3at) or 802.3bt to run all radios at full power — check the datasheet.</p>
 
           <table class="breakdown breakdown--radio">
             <caption>Load by radio</caption>
@@ -199,6 +201,20 @@
             </thead>
             <tbody id="wlan-radio-table"></tbody>
           </table>
+
+          <table class="breakdown breakdown--radio breakdown--airtime">
+            <caption>Airtime by client type</caption>
+            <thead>
+              <tr>
+                <th scope="col">Client type</th>
+                <th scope="col">MCS</th>
+                <th scope="col">Rate<br><span class="th-unit">Mbit/s</span></th>
+                <th scope="col">Airtime<br><span class="th-unit">of its radio</span></th>
+              </tr>
+            </thead>
+            <tbody id="wlan-airtime"></tbody>
+          </table>
+          <p class="plate-note">Slower clients need more airtime for the same data. The airtime of all clients on a radio adds up to its utilization.</p>
 
           <table class="breakdown">
             <caption>Breakdown by client type</caption>
@@ -224,8 +240,13 @@
           <span class="cell-label">Client type</span>
           <select name="type"></select>
         </label>
-        <label class="cell-field cell-field--radio">
-          <span class="radio-pick-label">Radio</span>
+        <div class="cell-field cell-field--pick cell-field--client" role="group">
+          <span class="pick-label">Client</span>
+          <select name="client" aria-label="Client Wi-Fi standard"></select>
+          <select class="pick-narrow" name="clientStreams" aria-label="Client spatial streams"></select>
+        </div>
+        <label class="cell-field cell-field--pick cell-field--radio">
+          <span class="pick-label">Radio</span>
           <select name="radio"></select>
         </label>
       </div>
@@ -257,9 +278,29 @@
       </label>
       <label class="cell">
         <span class="cell-label">Capacity (Mbit/s)</span>
-        <input class="number" type="number" name="capacity" min="0" step="1" inputmode="decimal">
+        <input class="number" type="number" name="capacity" min="0" step="1" inputmode="decimal" placeholder="auto">
       </label>
       <button class="remove-row" type="button" aria-label="Remove radio">✕</button>
+      <fieldset class="cell cell--mode">
+        <legend class="cell-label">Signal</legend>
+        <div class="switch">
+          <label><input type="radio" data-field="signalMode" value="snr"><span>SNR</span></label>
+          <label><input type="radio" data-field="signalMode" value="rssi"><span>RSSI</span></label>
+        </div>
+      </fieldset>
+      <label class="cell">
+        <span class="cell-label signal-label">SNR (dB)</span>
+        <input class="number" type="number" name="signal" step="1" inputmode="decimal">
+      </label>
+      <label class="cell cell--noise">
+        <span class="cell-label">Noise floor (dBm)</span>
+        <input class="number" type="number" name="noise" step="1" inputmode="decimal">
+      </label>
+      <div class="link-readout" aria-live="polite">
+        <p class="link-step"><span class="link-value" data-step="snr"></span><span class="link-sub" data-step="snr-sub"></span></p>
+        <p class="link-step"><span class="link-value" data-step="mcs"></span><span class="link-sub" data-step="mcs-sub"></span></p>
+        <p class="link-step"><span class="link-value" data-step="rate"></span><span class="link-sub" data-step="rate-sub"></span></p>
+      </div>
     </li>
   </template>
 </body>
