@@ -661,3 +661,11 @@ test('wired rows carry no WLAN fields and the wired tab is unchanged', () => {
   assert.equal(app.formatPercent(r.uplink.utilization), '3.6%');
   assert.equal(r.switchSize.size, 24);
 });
+
+test('VDI presets rise from light to heavy and are accepted as row types', () => {
+  const mbps = ['vdi-light', 'vdi-standard', 'vdi-heavy'].map((id) => app.CLIENT_TYPES.find((t) => t.id === id).mbps);
+  assert.deepEqual(mbps, [0.5, 3, 10]);
+  const s = app.sanitizeState('wired', { rows: [{ type: 'vdi-standard', count: 40, mbps: 3 }], concurrency: 25 });
+  assert.equal(s.rows[0].type, 'vdi-standard');
+  assert.equal(app.calcWired(s).peak, 120);
+});
