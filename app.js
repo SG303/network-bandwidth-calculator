@@ -22,6 +22,14 @@ const TYPE_BY_ID = Object.fromEntries(CLIENT_TYPES.map((t) => [t.id, t]));
 
 const UPLINK_CLASSES_GBPS = [1, 10, 25, 40, 100];
 const COMPARISON_CLASSES_GBPS = [1, 10, 25];
+// Ethernet speeds of a switch port that an AP plugs into, with the copper
+// cabling that carries each over 100 m.
+const AP_PORT_CLASSES = [
+  { gbps: 1, cabling: 'Cat5e or better' },
+  { gbps: 2.5, cabling: 'Cat5e or better' },
+  { gbps: 5, cabling: 'Cat6 or better' },
+  { gbps: 10, cabling: 'Cat6a (Cat6 up to 55 m)' },
+];
 const SWITCH_SIZES = [8, 12, 24, 28, 48, 52];
 
 // Wi-Fi generations as PHY families: data subcarriers per channel width, OFDM
@@ -197,6 +205,20 @@ function recommendUplink(effectiveMbps) {
   if (gbps === undefined) return { gbps: null, utilization: null, lowReserve: false };
   const utilization = utilizationOf(effectiveMbps, gbps * 1000);
   return { gbps, utilization, lowReserve: utilization > BORDERLINE_LIMIT };
+}
+
+// Smallest AP port speed that carries the load at no more than 85%
+// utilization. `ceiling` is what the radios could deliver at most; when it
+// exceeds the port speed, peaks are capped by the port.
+function recommendApPort(loadMbps, ceilingMbps) {
+  const found = AP_PORT_CLASSES.find((c) => utilizationOf(loadMbps, c.gbps * 1000) <= BORDERLINE_LIMIT);
+  if (!found) return { gbps: null, utilization: null, cabling: null, capped: false };
+  return {
+    gbps: found.gbps,
+    utilization: utilizationOf(loadMbps, found.gbps * 1000),
+    cabling: found.cabling,
+    capped: ceilingMbps > found.gbps * 1000,
+  };
 }
 
 // Smallest common switch with 20% port reserve (integer math: size ≥ ports × 1.2).
@@ -443,6 +465,11 @@ function calcWlan({ rows, radios, concurrency }) {
   );
   const byIndex = (a, b) => a.index - b.index;
   const mix = summarizeMix(rows);
+  const aps = Math.max(1, ...perRadio.map((r) => r.aps));
+  // Each AP gets its own port. A radio never puts more on the wire than its
+  // capacity, so an overloaded radio is capped there.
+  const portLoad = clean(active.reduce((sum, r) => sum + Math.min(r.effective, r.capacity), 0) / aps);
+  const portCeiling = clean(active.reduce((sum, r) => sum + r.capacity, 0));
   return {
     ...mix,
     peak: mix.demand,
@@ -453,7 +480,8 @@ function calcWlan({ rows, radios, concurrency }) {
     limiting: limiting ? limiting.id : null,
     utilization: limiting ? limiting.utilization : 0,
     verdict,
-    aps: Math.max(1, ...perRadio.map((r) => r.aps)),
+    aps,
+    port: active.length ? { load: portLoad, ceiling: portCeiling, ...recommendApPort(portLoad, portCeiling) } : null,
     capacity: (limiting || perRadio[0]).capacity,
     perClient: limiting ? limiting.perClient : null,
   };
@@ -818,6 +846,8 @@ function renderWlan() {
   setReading($('wlan-capacity-out'), empty ? null : formatRate(r.capacity));
   setReading($('wlan-per-client'), empty ? null : formatRate(r.perClient));
 
+  renderApPort(r);
+
   $('wlan-streams-note').hidden = !r.radios.some((x) => x.streams === 4);
 
   renderRadioTable(r);
@@ -825,6 +855,37 @@ function renderWlan() {
   renderRadioStatus(r);
   renderClientStatus(r);
   renderBreakdown('wlan', r);
+}
+
+function renderApPort(result) {
+  const port = result.port;
+  const hasPort = !!port && port.gbps !== null;
+
+  setReading($('wlan-port'), hasPort ? formatRate(port.gbps * 1000) : null);
+  setBadge(
+    $('wlan-port-badge'),
+    hasPort ? `Utilization ${formatPercent(port.utilization)}` : '',
+    hasPort ? utilizationZone(port.utilization) : '',
+  );
+
+  const count = result.aps > 1 ? `One port per AP, ${formatNumber(result.aps, 0)} in total. ` : '';
+  $('wlan-port-note').textContent = port ? `${count}Effective load per AP: ${formatRateText(port.load)}` : '';
+  $('wlan-port-cabling').textContent = hasPort ? `Cabling for 100 m: ${port.cabling}` : '';
+
+  const hint = $('wlan-port-hint');
+  if (!port) setNote(hint, '');
+  else if (!hasPort) setNote(hint, 'The load per AP exceeds what a 10 Gbit/s port carries – check the capacity override.', 'crit');
+  else if (port.capped) {
+    setNote(hint, `The radios can deliver up to ${formatRateText(port.ceiling)} per AP, more than this port carries. `
+      + 'The typical load fits, but single peaks are capped at the port speed.', 'warn');
+  } else setNote(hint, '');
+
+  $('wlan-port-compare').querySelectorAll('.compare-row').forEach((row, i) => {
+    const gbps = AP_PORT_CLASSES[i].gbps;
+    setScale(row.querySelector('.scale'), port ? utilizationOf(port.load, gbps * 1000) : null);
+    row.querySelector('.compare-value').textContent = port ? formatPercent(utilizationOf(port.load, gbps * 1000)) : '—';
+    row.classList.toggle('is-recommended', hasPort && port.gbps === gbps);
+  });
 }
 
 // Clients that cannot connect at all come first; a link below MCS 0 second.
@@ -1116,9 +1177,9 @@ function setupMix(tab) {
 
 /* Switch tab */
 
-function buildComparison() {
-  const list = $('wired-compare');
-  for (const gbps of COMPARISON_CLASSES_GBPS) {
+function buildComparison(listId, classes) {
+  const list = $(listId);
+  for (const gbps of classes) {
     const li = document.createElement('li');
     li.className = 'compare-row';
     li.innerHTML = `
@@ -1137,7 +1198,7 @@ function syncWiredInputs() {
 }
 
 function setupWired() {
-  buildComparison();
+  buildComparison('wired-compare', COMPARISON_CLASSES_GBPS);
   $('wired-concurrency').addEventListener('input', (event) => {
     state.wired.concurrency = clampConcurrency(event.target.value);
     update('wired');
@@ -1210,6 +1271,7 @@ function parseField(text) {
 }
 
 function setupWlan() {
+  buildComparison('wlan-port-compare', AP_PORT_CLASSES.map((c) => c.gbps));
   const root = $('wlan-radios');
 
   root.addEventListener('input', (event) => {
@@ -1362,11 +1424,13 @@ if (typeof module !== 'undefined' && module.exports) {
     SIGNAL_LIMITS,
     DEFAULT_RADIO,
     DEFAULTS,
+    AP_PORT_CLASSES,
     toNumber,
     summarizeMix,
     utilizationZone,
     accessPortClass,
     recommendUplink,
+    recommendApPort,
     recommendSwitch,
     clampConcurrency,
     calcWired,

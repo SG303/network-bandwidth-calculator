@@ -870,6 +870,21 @@ input[type="range"] {
   color: var(--aqua-deep);
 }
 
+/* AP switch port: recommendation first, then the comparison. */
+.port {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.port .sub-title {
+  margin-bottom: 0.25rem;
+}
+
+.port .status-note,
+.port .compare-list {
+  margin-top: 0.625rem;
+}
+
 .plate-note {
   font-size: 0.9375rem;
   color: var(--ink-soft);
