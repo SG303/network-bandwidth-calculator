@@ -62,6 +62,9 @@ streams), editable per row; the wired tab ignores it.
 |---------------|-----------------------------------------------|----------------|-----------------|
 | office-light  | Office – light (web, email, SaaS)             | 2              | Wi-Fi 6, 2×2    |
 | office-heavy  | Office – heavy (cloud workloads, downloads)   | 10             | Wi-Fi 6, 2×2    |
+| vdi-light     | VDI – light (task worker, Office, ERP)        | 0.5            | Wi-Fi 6, 2×2    |
+| vdi-standard  | VDI – standard (browser, Office, Teams)      | 3              | Wi-Fi 6, 2×2    |
+| vdi-heavy     | VDI – heavy (video, multi-monitor, graphics)  | 10             | Wi-Fi 6, 2×2    |
 | video-conf    | Video conference (Teams/Zoom, HD)             | 4              | Wi-Fi 6, 2×2    |
 | stream-hd     | Video streaming (HD)                          | 8              | Wi-Fi 6, 2×2    |
 | stream-4k     | Video streaming (4K)                          | 25             | Wi-Fi 6, 2×2    |
@@ -70,6 +73,16 @@ streams), editable per row; the wired tab ignores it.
 | iot           | Printers / scanners / IoT                     | 0.5            | Wi-Fi 4, 1×1    |
 | pos           | Point of sale / POS                           | 1              | Wi-Fi 5, 2×2    |
 | custom        | Custom client type                            | 10             | Wi-Fi 6, 2×2    |
+
+The VDI values are the active-session demand of one remote-display client
+(RDP, HDX, Blast), not an average. Basis: Microsoft's RDP measurements for
+1080p single monitor (Word/Excel 0.1–0.5 Mbit/s, web browsing 1–6.5, video
+playback 2.5–9.5 depending on graphics mode) and Citrix/Horizon planning
+figures (about 0.15–0.8 Mbit/s for office work, 1.5–2.3 for video without
+redirection). Higher resolution, more monitors, 3D/CAD or 4K raise the demand
+well above "heavy" (Microsoft cites 15 Mbit/s at 4K): enter it per row. VDI is
+more sensitive to latency and jitter than to bandwidth (aim for under 50 ms
+round trip).
 
 ## Switch (wired) tab
 

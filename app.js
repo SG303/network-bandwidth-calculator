@@ -9,6 +9,9 @@
 const CLIENT_TYPES = [
   { id: 'office-light', label: 'Office – light (web, email, SaaS)', mbps: 2, client: 'wifi6', streams: 2 },
   { id: 'office-heavy', label: 'Office – heavy (cloud workloads, downloads)', mbps: 10, client: 'wifi6', streams: 2 },
+  { id: 'vdi-light', label: 'VDI – light (task worker, Office, ERP)', mbps: 0.5, client: 'wifi6', streams: 2 },
+  { id: 'vdi-standard', label: 'VDI – standard (browser, Office, Teams)', mbps: 3, client: 'wifi6', streams: 2 },
+  { id: 'vdi-heavy', label: 'VDI – heavy (video, multi-monitor, graphics)', mbps: 10, client: 'wifi6', streams: 2 },
   { id: 'video-conf', label: 'Video conference (Teams/Zoom, HD)', mbps: 4, client: 'wifi6', streams: 2 },
   { id: 'stream-hd', label: 'Video streaming (HD)', mbps: 8, client: 'wifi6', streams: 2 },
   { id: 'stream-4k', label: 'Video streaming (4K)', mbps: 25, client: 'wifi6', streams: 2 },
