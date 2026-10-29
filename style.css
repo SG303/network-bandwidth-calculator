@@ -204,7 +204,13 @@ input.number:hover {
   border-color: var(--muted);
 }
 
-input.number[aria-invalid="true"] {
+input.number::placeholder {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+input.number[aria-invalid="true"],
+select[aria-invalid="true"] {
   border-color: var(--crit);
   background: var(--crit-tint);
 }
@@ -229,7 +235,8 @@ input.number[aria-invalid="true"] {
   align-items: start;
 }
 
-/* Client mix: the radio assignment sits under the client type */
+/* Client mix: the client capability and the radio assignment sit under the
+   client type as compact pick lines. */
 .cell--type {
   display: grid;
   gap: 0.375rem;
@@ -239,25 +246,30 @@ input.number[aria-invalid="true"] {
   display: block;
 }
 
-.cell-field--radio {
+.cell-field--pick {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.radio-pick-label {
+.pick-label {
+  min-width: 2.75rem;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--muted);
   white-space: nowrap;
 }
 
-.cell-field--radio select {
+.cell-field--pick select {
   flex: 1;
   width: auto;
   min-width: 0;
   min-height: 2rem;
   font-size: 0.875rem;
+}
+
+.cell-field--pick .pick-narrow {
+  flex: 0 0 4.75rem;
 }
 
 .mix-head {
@@ -402,6 +414,133 @@ input[type="range"] {
   grid-column: 4;
   grid-row: 2;
   align-self: end;
+}
+
+/* Third line: how the signal is entered. SNR or RSSI is a two-position
+   switch like the tab selector; the noise floor only matters for RSSI. */
+.cell--mode {
+  grid-column: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.cell--mode legend {
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.switch {
+  display: flex;
+  gap: 3px;
+  min-height: 2.5rem;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--alu-deep);
+  box-shadow: inset 0 1px 2px rgba(24, 40, 50, 0.18);
+}
+
+.switch label {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+
+.switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.switch span {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.switch span:hover {
+  color: var(--ink);
+}
+
+.switch input:checked + span {
+  background: var(--plate);
+  color: var(--aqua-deep);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 1px 3px rgba(24, 40, 50, 0.22);
+}
+
+.switch input:focus-visible + span {
+  box-shadow: var(--focus);
+}
+
+/* Link readout: a small display window that derives the capacity in three
+   steps, SNR to MCS to usable rate; the chevrons mark the direction. */
+.link-readout {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-radius: 6px;
+  background: var(--window);
+  box-shadow: inset 0 1px 3px rgba(24, 40, 50, 0.14), inset 0 0 0 1px rgba(24, 40, 50, 0.07);
+}
+
+.link-step {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 0.125rem;
+  min-width: 0;
+  padding: 0.5rem 0.75rem 0.5625rem 1rem;
+}
+
+.link-step:first-child {
+  padding-left: 0.75rem;
+}
+
+.link-step + .link-step {
+  border-left: 1px solid var(--hairline);
+}
+
+.link-step + .link-step::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -5px;
+  width: 9px;
+  height: 9px;
+  border-top: 1px solid var(--hairline);
+  border-right: 1px solid var(--hairline);
+  background: var(--window);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.link-value {
+  font-family: var(--font-readout);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.link-step:last-child .link-value {
+  color: var(--aqua-deep);
+}
+
+.link-sub {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+.link-readout [data-tone="crit"] {
+  color: var(--crit-ink);
 }
 
 /* Assumptions */
@@ -796,6 +935,18 @@ input[type="range"] {
   white-space: nowrap;
 }
 
+/* Airtime table: client type on top, its link on a quieter second line. */
+.airtime-type {
+  display: block;
+}
+
+.breakdown--airtime .radio-meta {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  white-space: normal;
+}
+
 /* Percentage and verdict stay on one line when there is room and stack when not. */
 .util-stack {
   display: inline-flex;
@@ -958,5 +1109,34 @@ input[type="range"] {
   .breakdown--radio .badge {
     padding: 0.125rem 0.5rem;
     font-size: 0.8125rem;
+  }
+
+  .breakdown--radio .radio-meta {
+    white-space: normal;
+  }
+
+  input.number::placeholder {
+    font-size: 0.8125rem;
+  }
+
+  /* The link readout stacks; its chevrons turn to point down. */
+  .link-readout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .link-step,
+  .link-step:first-child {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .link-step + .link-step {
+    border-left: 0;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .link-step + .link-step::before {
+    top: -5px;
+    left: 1.25rem;
+    transform: rotate(135deg);
   }
 }
