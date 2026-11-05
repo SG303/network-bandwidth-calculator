@@ -28,9 +28,6 @@
         <div class="inputs">
           <section class="mix" id="wired-mix" aria-labelledby="wired-mix-title">
             <h2 class="block-title" id="wired-mix-title">Client mix</h2>
-            <div class="mix-head" aria-hidden="true">
-              <span>Client type</span><span>Count</span><span>Mbit/s per client</span>
-            </div>
             <ul class="mix-rows"></ul>
             <p class="undo" id="wired-mix-undo" role="status"><span class="undo-text"></span> <button class="undo-button" type="button" hidden>Undo</button></p>
             <button class="button add-row" type="button">+ Add client type</button>
@@ -132,9 +129,6 @@
         <div class="inputs">
           <section class="mix" id="wlan-mix" aria-labelledby="wlan-mix-title">
             <h2 class="block-title" id="wlan-mix-title">Client mix</h2>
-            <div class="mix-head" aria-hidden="true">
-              <span>Client type</span><span>Count</span><span>Mbit/s per client</span>
-            </div>
             <ul class="mix-rows"></ul>
             <p class="undo" id="wlan-mix-undo" role="status"><span class="undo-text"></span> <button class="undo-button" type="button" hidden>Undo</button></p>
             <button class="button add-row" type="button">+ Add client type</button>
@@ -285,28 +279,25 @@
 
   <template id="mix-row-template">
     <li class="mix-row">
-      <div class="cell cell--type">
-        <label class="cell-field">
-          <span class="cell-label">Client type</span>
-          <select name="type"></select>
-        </label>
-        <div class="cell-field cell-field--pick cell-field--client" role="group">
-          <span class="pick-label">Client</span>
-          <select name="client" aria-label="Client Wi-Fi standard"></select>
-          <select class="pick-narrow" name="clientStreams" aria-label="Client spatial streams"></select>
-        </div>
-        <label class="cell-field cell-field--pick cell-field--radio">
-          <span class="pick-label">Radio</span>
-          <select name="radio"></select>
-        </label>
-      </div>
-      <label class="cell">
-        <span class="cell-label">Count</span>
-        <input class="number" type="number" name="count" min="0" step="1" inputmode="numeric">
+      <label class="win win--count">
+        <span class="sr-only">Count</span>
+        <input class="win-input" type="number" name="count" min="0" step="1" inputmode="numeric">
       </label>
-      <label class="cell">
-        <span class="cell-label">Mbit/s per client</span>
-        <input class="number" type="number" name="mbps" min="0" step="0.1" inputmode="decimal">
+      <select class="pick pick--title" name="type"></select>
+      <div class="mix-spec">
+        <span class="spec-group spec-client">
+          <select class="pick" name="client" aria-label="Client Wi-Fi standard"></select>
+          <select class="pick" name="clientStreams" aria-label="Client spatial streams"></select>
+        </span>
+        <span class="spec-group spec-radio">
+          <span class="pick-joint" aria-hidden="true">on</span>
+          <select class="pick pick--band" name="radio" aria-label="Radio"></select>
+        </span>
+      </div>
+      <label class="win win--rate">
+        <span class="sr-only">Mbit/s per client</span>
+        <input class="win-input" type="number" name="mbps" min="0" step="0.1" inputmode="decimal">
+        <span class="win-unit" aria-hidden="true">Mbit/s each</span>
       </label>
       <button class="remove-row" type="button" aria-label="Remove row">✕</button>
     </li>
@@ -314,38 +305,44 @@
 
   <template id="radio-row-template">
     <li class="mix-row">
-      <label class="cell cell--profile">
-        <span class="cell-label">Radio</span>
-        <select name="profile"></select>
-      </label>
-      <label class="cell">
-        <span class="cell-label">Channel width</span>
-        <select name="width"></select>
-      </label>
-      <label class="cell">
-        <span class="cell-label">Spatial streams</span>
-        <select name="streams"></select>
-      </label>
-      <label class="cell">
-        <span class="cell-label">Capacity (Mbit/s)</span>
-        <input class="number" type="number" name="capacity" min="0" step="1" inputmode="decimal" placeholder="auto">
-      </label>
+      <div class="radio-line">
+        <span class="radio-name"></span>
+        <select class="pick pick--title" name="profile" aria-label="Band and standard"></select>
+        <span class="pick-pair">
+          <span class="pick-joint" aria-hidden="true">@</span>
+          <select class="pick" name="width" aria-label="Channel width"></select>
+        </span>
+        <select class="pick" name="streams" aria-label="Spatial streams"></select>
+      </div>
       <button class="remove-row" type="button" aria-label="Remove radio">✕</button>
-      <fieldset class="cell cell--mode">
-        <legend class="cell-label">Signal</legend>
-        <div class="switch">
-          <label><input type="radio" data-field="signalMode" value="snr"><span>SNR</span></label>
-          <label><input type="radio" data-field="signalMode" value="rssi"><span>RSSI</span></label>
-        </div>
-      </fieldset>
-      <label class="cell">
-        <span class="cell-label signal-label">SNR (dB)</span>
-        <input class="number" type="number" name="signal" step="1" inputmode="decimal">
-      </label>
-      <label class="cell cell--noise">
-        <span class="cell-label">Noise floor (dBm)</span>
-        <input class="number" type="number" name="noise" step="1" inputmode="decimal">
-      </label>
+      <div class="radio-signal">
+        <fieldset class="cell--mode">
+          <legend class="sr-only">Signal</legend>
+          <div class="switch">
+            <label><input type="radio" data-field="signalMode" value="snr"><span>SNR</span></label>
+            <label><input type="radio" data-field="signalMode" value="rssi"><span>RSSI</span></label>
+          </div>
+        </fieldset>
+        <label class="win">
+          <span class="sr-only signal-label">SNR</span>
+          <input class="win-input" type="number" name="signal" step="1" inputmode="decimal">
+          <span class="win-unit signal-unit">dB</span>
+        </label>
+        <label class="win-field cell--noise">
+          <span>Noise</span>
+          <span class="win">
+            <input class="win-input" type="number" name="noise" step="1" inputmode="decimal">
+            <span class="win-unit">dBm</span>
+          </span>
+        </label>
+        <label class="win-field win-field--end">
+          <span>Capacity</span>
+          <span class="win">
+            <input class="win-input" type="number" name="capacity" min="0" step="1" inputmode="decimal" placeholder="auto">
+            <span class="win-unit">Mbit/s</span>
+          </span>
+        </label>
+      </div>
       <div class="link-readout" aria-live="polite">
         <p class="link-step"><span class="link-value" data-step="snr"></span><span class="link-sub" data-step="snr-sub"></span></p>
         <p class="link-step"><span class="link-value" data-step="mcs"></span><span class="link-sub" data-step="mcs-sub"></span></p>

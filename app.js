@@ -392,6 +392,21 @@ function radioLabel(radio) {
   return `${profileOf(radio.profile).short} @ ${radio.width} MHz, ${streamsLabel(radio.streams || 2)}`;
 }
 
+// Labels for choosing a radio in the client mix: band and width are enough
+// unless two radios share them; then the full label, and if even that is the
+// same, the radio's number as shown in the radio list.
+function radioPickLabels(radios) {
+  const unique = (labels) => labels.map((label) => labels.filter((l) => l === label).length === 1);
+  const short = radios.map((radio) => `${profileOf(radio.profile).band} GHz @ ${radio.width} MHz`);
+  const full = radios.map(radioLabel);
+  const shortOk = unique(short);
+  const fullOk = unique(full);
+  return radios.map((radio, i) => {
+    if (shortOk[i]) return short[i];
+    return fullOk[i] ? full[i] : `Radio ${i + 1}, ${short[i]}`;
+  });
+}
+
 // Capacity of a mix with different link rates: what the radio carries when
 // every client gets its share of demand (demand-weighted harmonic mean).
 function blendedRate(links, rateOf) {
@@ -1104,7 +1119,8 @@ function renderRadioStatus(result) {
     if (!li) return;
     const { signal, reference: link } = radio;
     const rssi = signal.mode === 'rssi';
-    li.querySelector('.signal-label').textContent = rssi ? 'RSSI (dBm)' : 'SNR (dB)';
+    li.querySelector('.signal-label').textContent = rssi ? 'RSSI' : 'SNR';
+    li.querySelector('.signal-unit').textContent = rssi ? 'dBm' : 'dB';
     li.querySelector('.cell--noise').hidden = !rssi;
     li.querySelector('[name="noise"]').placeholder = `auto ${formatNumber(signal.autoNoise, 0).replace('-', '−')}`;
     setInvalid(li.querySelector('[name="signal"]'), signal.signalError);
@@ -1226,6 +1242,27 @@ function syncScrollRegions() {
   });
 }
 
+/* Choices are only as wide as their text. Browsers with field-sizing do that
+   in CSS; elsewhere the selected label is measured. */
+
+const FIELD_SIZING = typeof CSS !== 'undefined' && CSS.supports('field-sizing', 'content');
+let measureContext = null;
+
+function fitPick(select) {
+  if (FIELD_SIZING || !select.isConnected) return;
+  const style = getComputedStyle(select);
+  measureContext = measureContext || document.createElement('canvas').getContext('2d');
+  measureContext.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  const text = select.selectedOptions[0]?.text || '';
+  const extra = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) + 2;
+  select.style.width = `${Math.ceil(measureContext.measureText(text).width + extra)}px`;
+}
+
+function fitPicks(root) {
+  if (FIELD_SIZING) return;
+  root.querySelectorAll('select.pick').forEach(fitPick);
+}
+
 /* Client mix (shared component) */
 
 function buildMixRow(tab, row, index) {
@@ -1236,9 +1273,11 @@ function buildMixRow(tab, row, index) {
   select.value = row.type;
   li.querySelector('[name="count"]').value = row.count;
   li.querySelector('[name="mbps"]').value = row.mbps;
-  const clientPick = li.querySelector('.cell-field--client');
+  const clientPick = li.querySelector('.spec-client');
   if (tab !== 'wlan') {
-    clientPick.remove();
+    // Wired rows only have count, type and rate, and fit one line.
+    li.querySelector('.mix-spec').remove();
+    li.classList.add('mix-row--flat');
   } else {
     const clientSelect = clientPick.querySelector('[name="client"]');
     clientSelect.append(...Object.entries(CLIENT_STANDARDS).map(([id, s]) => new Option(s.label, id)));
@@ -1247,13 +1286,13 @@ function buildMixRow(tab, row, index) {
     streamsSelect.append(...CLIENT_STREAM_OPTIONS.map((n) => new Option(streamsLabel(n), String(n))));
     streamsSelect.value = String(row.clientStreams);
   }
-  const radioPick = li.querySelector('.cell-field--radio');
   // The radio pick only makes sense when the AP actually has several radios.
-  if (tab !== 'wlan' || state.wlan.radios.length < 2) {
-    radioPick.remove();
-  } else {
-    const radioSelect = radioPick.querySelector('[name="radio"]');
-    radioSelect.append(...state.wlan.radios.map((x) => new Option(radioLabel(x), x.id)));
+  if (tab === 'wlan' && state.wlan.radios.length < 2) {
+    li.querySelector('.spec-radio').remove();
+  } else if (tab === 'wlan') {
+    const radioSelect = li.querySelector('[name="radio"]');
+    const labels = radioPickLabels(state.wlan.radios);
+    radioSelect.append(...state.wlan.radios.map((x, i) => new Option(labels[i], x.id)));
     radioSelect.value = row.radio;
   }
   labelMixRow(li, tab, row, index);
@@ -1278,7 +1317,9 @@ function labelMixRow(li, tab, row, index) {
 }
 
 function renderMix(tab) {
-  $(`${tab}-mix`).querySelector('.mix-rows').replaceChildren(...state[tab].rows.map((row, i) => buildMixRow(tab, row, i)));
+  const list = $(`${tab}-mix`).querySelector('.mix-rows');
+  list.replaceChildren(...state[tab].rows.map((row, i) => buildMixRow(tab, row, i)));
+  fitPicks(list);
 }
 
 function setupMix(tab) {
@@ -1301,6 +1342,7 @@ function setupMix(tab) {
         li.querySelector('[name="client"]').value = row.client;
         li.querySelector('[name="clientStreams"]').value = String(row.clientStreams);
       }
+      fitPicks(li);
     } else if (name === 'client') {
       row.client = value;
     } else if (name === 'clientStreams') {
@@ -1420,15 +1462,21 @@ function buildRadioRow(radio, index) {
     input.name = `signal-mode-${radio.id}`;
   });
   syncRadioRow(li, radio);
+  const single = state.wlan.radios.length === 1;
+  const name = li.querySelector('.radio-name');
+  name.textContent = `Radio ${index + 1}`;
+  name.hidden = single;
   const remove = li.querySelector('.remove-row');
-  remove.hidden = state.wlan.radios.length === 1;
+  remove.hidden = single;
   remove.setAttribute('aria-label', `Remove radio ${index + 1}`);
   return li;
 }
 
 function renderRadios() {
   const root = $('wlan-radios');
-  root.querySelector('.mix-rows').replaceChildren(...state.wlan.radios.map(buildRadioRow));
+  const list = root.querySelector('.mix-rows');
+  list.replaceChildren(...state.wlan.radios.map(buildRadioRow));
+  fitPicks(list);
   root.querySelector('.add-row').hidden = state.wlan.radios.length >= MAX_RADIOS;
 }
 
@@ -1469,6 +1517,7 @@ function setupWlan() {
         radio.signal = signalAfterWidthChange({ ...radio, width: oldWidth }, radio.width);
       }
       syncRadioRow(li, radio);
+      fitPicks(li);
     } else if (name === 'width' || name === 'streams') {
       // The SNR moves with the width (SNR mode); an RSSI stays as entered.
       if (name === 'width') radio.signal = signalAfterWidthChange(radio, Number(value));
@@ -1477,6 +1526,7 @@ function setupWlan() {
       // A noise floor entered by hand belongs to the old width.
       if (name === 'width') radio.noise = null;
       syncRadioRow(li, radio);
+      fitPicks(li);
     } else if (name === 'signalMode') {
       radio.signal = convertSignal(radio, value);
       radio.signalMode = value;
@@ -1603,6 +1653,10 @@ function init() {
   setupUndo();
   setupStrips();
   window.addEventListener('resize', syncScrollRegions);
+  window.addEventListener('resize', () => fitPicks(document));
+  document.addEventListener('change', (event) => {
+    if (event.target.matches('select.pick')) fitPick(event.target);
+  });
 
   renderMix('wired');
   renderMix('wlan');
@@ -1661,6 +1715,7 @@ if (typeof module !== 'undefined' && module.exports) {
     calcWlan,
     legacyCapacity,
     radioLabel,
+    radioPickLabels,
     formatRate,
     formatRateText,
     formatPercent,

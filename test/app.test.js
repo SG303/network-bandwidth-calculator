@@ -672,3 +672,18 @@ test('VDI presets rise from light to heavy and are accepted as row types', () =>
   assert.equal(s.rows[0].type, 'vdi-standard');
   assert.equal(app.calcWired(s).peak, 120);
 });
+
+test('radio choices in the client mix are short unless radios share band and width', () => {
+  assert.deepEqual(
+    app.radioPickLabels([radio({ id: 'r1', profile: '2g', width: 20 }), radio({ id: 'r2', profile: '5g-ax', width: 80 })]),
+    ['2.4 GHz @ 20 MHz', '5 GHz @ 80 MHz'],
+  );
+  assert.deepEqual(
+    app.radioPickLabels([radio({ id: 'r1', profile: '5g-ac', width: 80 }), radio({ id: 'r2', profile: '5g-ax', width: 80 })]),
+    ['5 GHz (Wi-Fi 5) @ 80 MHz, 2×2', '5 GHz (Wi-Fi 6) @ 80 MHz, 2×2'],
+  );
+  assert.deepEqual(
+    app.radioPickLabels([radio({ id: 'r1' }), radio({ id: 'r2' }), radio({ id: 'r3', profile: '6g-be', width: 160 })]),
+    ['Radio 1, 5 GHz @ 80 MHz', 'Radio 2, 5 GHz @ 80 MHz', '6 GHz @ 160 MHz'],
+  );
+});
