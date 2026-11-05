@@ -140,11 +140,11 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
 ### Inputs
 
 - Client mix (shared component). **Default mix: 20 × office-light, 5 ×
-  stream-4k**, both rows on the first radio. Under the client-type select each
-  row has a compact "Client" line with the Wi-Fi standard (Wi-Fi 4 / 5 / 6 /
-  6E / 7) and the client's spatial streams (1×1 / 2×2 / 4×4), filled from the
-  type preset, and a compact "Radio" line that assigns the clients to one of
-  the AP's radios; the radio line is hidden while the AP has only one radio.
+  stream-4k**, both rows on the first radio. Under the client type each row
+  has the Wi-Fi standard (Wi-Fi 4 / 5 / 6 / 6E / 7) and the client's spatial
+  streams (1×1 / 2×2 / 4×4), filled from the type preset, and "on <radio>",
+  which assigns the clients to one of the AP's radios; the radio choice is
+  hidden while the AP has only one radio.
 - Radio list "AP radios": 1–4 radios (**default: one**, see below). Every radio
   has:
   - Dropdown "Radio" (band + standard combined):
@@ -399,18 +399,26 @@ reachable clients, none → no recommendation):
   needed for switch ports, uplinks and WLAN".
 - Tab bar (pills): "Switch / wired" | "WLAN". Only one tab visible at a time.
 - Layout: two-column grid (inputs left, results right) ≥ 960 px, stacked below.
-- Client-mix component: table-like rows: type select, count (number, min 0,
-  step 1), Mbit/s per client (number, min 0, step 0.1), remove button "✕"
+- Input rows (client mix and radio list): numbers sit in recessed readout
+  windows with their unit inside; choices are native selects shown as text
+  with a dotted underline, only as wide as their selected label (CSS
+  `field-sizing: content`, measured in JS where unsupported). No field
+  stretches across the row.
+- Client-mix component: count window (number, min 0, step 1), client type,
+  "Mbit/s each" window (number, min 0, step 0.1), remove button "✕"
   (accessible name "Remove row N: <client type>"). The row controls carry
   their row in the accessible name ("Count, row N"). Button "+ Add client
-  type". Same type may
-  appear in multiple rows. WLAN rows add a "Client" line (standard and
-  streams) below the type select, and a "Radio" select (labels like
-  "5 GHz (Wi-Fi 6) @ 80 MHz, 2×2") when the AP has more than one radio. The
-  radio list uses four lines per radio with visible labels at every width:
-  the profile; channel width, spatial streams, capacity and remove; the
-  SNR/RSSI switch, the signal value and (RSSI only) the noise floor; the
-  link readout.
+  type". Same type may appear in multiple rows. Wired rows fit one line.
+  WLAN rows add a second line: standard, streams and, when the AP has more
+  than one radio, "on <radio>". Radio labels there are band and width
+  ("5 GHz @ 80 MHz"); radios sharing both get the full label
+  ("5 GHz (Wi-Fi 6) @ 80 MHz, 2×2"), identical radios their number
+  ("Radio 2, 5 GHz @ 80 MHz"). Below 560 px the rate and remove button move
+  to a line of their own.
+- The radio list uses three lines per radio: "Radio N" (only with several
+  radios), profile "@" channel width and spatial streams, remove; the
+  SNR/RSSI switch, the signal window, (RSSI only) the noise floor window and
+  the capacity window; the link readout.
 - Everything recalculates live on every input change (no calculate button).
   About a second after the last edit, a polite status summarizes the main
   result for screen readers.

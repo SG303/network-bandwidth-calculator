@@ -17,7 +17,6 @@
   --hairline-soft: #dde3e1;
   --aqua: #00757e;
   --aqua-deep: #005d64;
-  --aqua-tint: #d5ebeb;
 
   --ok: #2c7a47;
   --ok-ink: #1f5a34;
@@ -184,52 +183,10 @@ h1 {
   margin-bottom: 0.75rem;
 }
 
-label,
-.mix-head {
+.field label {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--ink-soft);
-}
-
-select,
-input.number {
-  width: 100%;
-  min-height: 2.5rem;
-  padding: 0.4rem 0.625rem;
-  border: 1px solid var(--field-edge);
-  border-radius: var(--radius-control);
-  background: var(--plate);
-}
-
-select {
-  font-size: 0.9375rem;
-  font-weight: 400;
-  color: var(--ink);
-  text-overflow: ellipsis;
-  cursor: pointer;
-}
-
-input.number {
-  font-family: var(--font-readout);
-  font-size: 1.125rem;
-  line-height: 1.2;
-  text-align: right;
-}
-
-select:hover,
-input.number:hover {
-  border-color: var(--ink-soft);
-}
-
-input.number::placeholder {
-  color: var(--muted);
-  font-size: 0.9375rem;
-}
-
-input.number[aria-invalid="true"],
-select[aria-invalid="true"] {
-  border-color: var(--crit);
-  background: var(--crit-tint);
 }
 
 .help {
@@ -243,95 +200,232 @@ select[aria-invalid="true"] {
   font-weight: 600;
 }
 
-/* Client mix */
-.mix-head,
-.mix-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 4.5rem 5.75rem 2.5rem;
-  gap: 0.5rem;
-  align-items: start;
-}
-
-/* Client mix: the client capability and the radio assignment sit under the
-   client type as compact pick lines. */
-.cell--type {
-  display: grid;
-  gap: 0.375rem;
-}
-
-.cell-field {
-  display: block;
-}
-
-.cell-field--pick {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.pick-label {
-  min-width: 2.75rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.cell-field--pick select {
-  flex: 1;
-  width: auto;
-  min-width: 0;
-  min-height: 2rem;
-  font-size: 0.875rem;
-}
-
-.cell-field--pick .pick-narrow {
-  flex: 0 0 4.75rem;
-}
-
-.mix-head {
-  align-items: end;
-  padding-bottom: 0.375rem;
-}
-
-.mix:has(.mix-rows:empty) .mix-head {
-  display: none;
-}
-
-.mix-head span:nth-child(n + 2) {
-  text-align: right;
-}
-
+/* Input rows (client mix, AP radios). Numbers sit in recessed readout windows
+   like the ones on the result plate; choices read as text and are only as
+   wide as their content, so no field stretches across the row. */
 .mix-rows {
   list-style: none;
   margin: 0 0 0.75rem;
   padding: 0;
-  display: grid;
-  gap: 0.5rem;
 }
 
-.cell {
-  display: block;
+.mix-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "count type type remove"
+    "count spec rate rate";
+  column-gap: 0.75rem;
+  row-gap: 0.25rem;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.mix-row:first-child {
+  border-top: 1px solid var(--hairline);
+}
+
+/* Wired rows have no client or radio choice and fit one line. */
+.mix-row--flat {
+  grid-template-areas: "count type rate remove";
+}
+
+/* Choices: a native select dressed as text with a dotted underline. */
+.pick {
+  appearance: none;
+  field-sizing: content;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 1.75rem;
+  margin-left: -0.25rem;
+  padding: 0.0625rem 1.125rem 0.0625rem 0.25rem;
+  border: 0;
+  border-radius: 4px;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2333444e' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 0.3125rem center;
+  color: var(--ink);
+  font-size: 0.875rem;
+  text-decoration: underline dotted var(--field-edge);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.3em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+/* Hover only firms up the underline; no tint behind the text. */
+.pick:hover {
+  text-decoration-style: solid;
+  text-decoration-color: var(--ink-soft);
+}
+
+/* The open list stays plain white on every platform. */
+.pick option {
+  background-color: #fff;
+  color: var(--ink);
+  font-weight: 400;
+}
+
+.pick--title {
+  grid-area: type;
+  justify-self: start;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.pick--band {
+  color: var(--aqua-deep);
+  font-weight: 600;
+}
+
+.pick[aria-invalid="true"] {
+  background-color: var(--crit-tint);
+  color: var(--crit-ink);
+  text-decoration: underline wavy var(--crit);
+  text-decoration-thickness: 1px;
+}
+
+.pick-joint {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.mix-spec {
+  grid-area: spec;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.125rem 0.625rem;
   min-width: 0;
 }
 
-.cell-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
+/* Groups that JS removes as a whole. */
+.spec-group {
+  display: contents;
+}
+
+/* A joining word ("on", "@") stays with the choice it introduces when the
+   line wraps. */
+.spec-radio,
+.pick-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* Numbers: a recessed window with the unit inside. */
+.win {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  min-height: 2.25rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  background: var(--window);
+  box-shadow: inset 0 1px 2px rgba(24, 40, 50, 0.16);
+  cursor: text;
+}
+
+.win:hover {
+  border-color: var(--field-edge);
+}
+
+.win:focus-within {
+  border-color: var(--aqua);
+  box-shadow: var(--focus);
+}
+
+.win:has([aria-invalid="true"]) {
+  border-color: var(--crit);
+  background: var(--crit-tint);
+}
+
+.win-input {
+  width: 3.5ch;
+  min-width: 1ch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-readout);
+  font-size: 1.125rem;
+  line-height: 1.2;
+  text-align: right;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+@supports (field-sizing: content) {
+  .win-input {
+    field-sizing: content;
+    width: auto;
+  }
+}
+
+.win-input::-webkit-inner-spin-button,
+.win-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* The window carries the focus ring. */
+.win-input:focus-visible {
+  box-shadow: none;
+}
+
+.win-input::placeholder {
+  color: var(--muted);
+  font-family: var(--font-text);
+  font-size: 0.875rem;
+}
+
+.win-unit {
+  font-size: 0.75rem;
+  color: var(--muted);
   white-space: nowrap;
 }
 
+.win--count {
+  grid-area: count;
+  justify-content: center;
+  min-width: 3.25rem;
+  min-height: 2.875rem;
+}
+
+.win--count .win-input {
+  min-width: 2ch;
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.win--rate {
+  grid-area: rate;
+  justify-self: end;
+  justify-content: center;
+  min-width: 7.5rem;
+}
+
+/* A caption in front of a window, for numbers the row does not explain. */
+.win-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
 .remove-row {
-  width: 2.5rem;
-  height: 2.5rem;
+  grid-area: remove;
+  width: 2rem;
+  height: 2rem;
   border: 1px solid transparent;
   border-radius: var(--radius-control);
   background: transparent;
   color: var(--muted);
-  font-size: 1rem;
+  font-size: 0.9375rem;
   cursor: pointer;
 }
 
@@ -359,8 +453,10 @@ select[aria-invalid="true"] {
   background: transparent;
 }
 
+/* Hover: the dashed outline turns solid on a light plate, no tint. */
 .add-row:hover {
-  background: var(--aqua-tint);
+  border-style: solid;
+  background: var(--plate);
 }
 
 .reset {
@@ -413,7 +509,7 @@ select[aria-invalid="true"] {
 }
 
 .undo-button:hover {
-  background: var(--aqua-tint);
+  background: var(--plate);
 }
 
 .reset:hover {
@@ -449,44 +545,53 @@ input[type="range"] {
   margin-bottom: 0.375rem;
 }
 
-/* AP radio list: four fields do not fit one line next to the results, so every
-   radio takes two lines with visible labels — the profile on top, then width,
-   streams and capacity. */
+/* AP radio: band, width and streams read as one line of text; below it the
+   signal entry and the capacity, then the link readout. */
 .radio-list .mix-row {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1fr) 2.5rem;
-  row-gap: 0.625rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--hairline);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "line remove"
+    "signal signal"
+    "readout readout";
+  row-gap: 0.5rem;
 }
 
-.radio-list .mix-row + .mix-row {
-  padding-top: 0.25rem;
+.radio-line {
+  grid-area: line;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.125rem 0.5rem;
+  min-width: 0;
 }
 
-.radio-list .cell-label {
-  position: static;
-  width: auto;
-  height: auto;
-  clip: auto;
-  display: block;
-  margin-bottom: 0.25rem;
-  white-space: normal;
+.radio-name {
+  margin-right: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
-.radio-list .cell--profile {
-  grid-column: 1 / -1;
+.radio-line .pick--title {
+  font-size: 1rem;
 }
 
-.radio-list .remove-row {
-  grid-column: 4;
-  grid-row: 2;
-  align-self: end;
+.radio-signal {
+  grid-area: signal;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
 }
 
-/* Third line: how the signal is entered. SNR or RSSI is a two-position
-   switch like the tab selector; the noise floor only matters for RSSI. */
+.radio-signal .win-field--end {
+  margin-left: auto;
+}
+
+/* How the signal is entered: SNR or RSSI is a two-position switch like the
+   tab selector; the noise floor only matters for RSSI. */
 .cell--mode {
-  grid-column: 1;
   margin: 0;
   padding: 0;
   border: 0;
@@ -503,7 +608,7 @@ input[type="range"] {
 .switch {
   display: flex;
   gap: 3px;
-  min-height: 2.5rem;
+  min-height: 2.25rem;
   padding: 3px;
   border-radius: 999px;
   background: var(--alu-deep);
@@ -514,6 +619,8 @@ input[type="range"] {
   flex: 1;
   display: flex;
   min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
 .switch input {
@@ -527,7 +634,7 @@ input[type="range"] {
   flex: 1;
   display: grid;
   place-items: center;
-  padding: 0 0.5rem;
+  padding: 0 0.875rem;
   border-radius: 999px;
   color: var(--ink-soft);
   cursor: pointer;
@@ -550,7 +657,7 @@ input[type="range"] {
 /* Link readout: a small display window that derives the capacity in three
    steps, SNR to MCS to usable rate; the chevrons mark the direction. */
 .link-readout {
-  grid-column: 1 / -1;
+  grid-area: readout;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   border-radius: 6px;
@@ -1283,56 +1390,52 @@ input[type="range"] {
     padding: 1.25rem;
   }
 
-  .mix-head {
-    display: none;
-  }
-
+  /* Rows stack: the type gets the full width, the rate and the remove
+     button share the last line. */
   .mix-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 2.5rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--hairline);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "count type type"
+      "count spec spec"
+      "count rate remove";
   }
 
-  .cell--type {
-    grid-column: 1 / -1;
+  .mix-row--flat {
+    grid-template-areas:
+      "count type type"
+      "count rate remove";
   }
 
-  .cell-label {
-    position: static;
-    width: auto;
-    height: auto;
-    clip: auto;
-    display: block;
-    margin-bottom: 0.25rem;
-    white-space: normal;
-  }
-
-  /* A label that wraps must not push its field out of line with the next one. */
-  .mix-row {
-    align-items: end;
-  }
-
-  .cell--type {
+  .win--count {
     align-self: start;
+  }
+
+  .win--rate {
+    justify-self: start;
+    margin-top: 0.25rem;
   }
 
   /* Comfortable touch targets on phones. */
   .tab,
-  select,
-  input.number,
   .remove-row,
   .button,
-  .switch {
+  .switch,
+  .win {
     min-height: 2.75rem;
+  }
+
+  .pick {
+    min-height: 2rem;
   }
 
   .remove-row {
     width: 2.75rem;
     height: 2.75rem;
+    margin-right: -0.5rem;
   }
 
-  .cell-field--pick select {
-    min-height: 2.75rem;
+  .radio-list .remove-row {
+    margin-top: -0.375rem;
   }
 
   input[type="range"] {
@@ -1341,13 +1444,9 @@ input[type="range"] {
   }
 
   /* 16 px keeps iOS Safari from zooming in when a select gets focus. */
-  select,
-  .cell-field--pick select {
+  .pick,
+  .pick-joint {
     font-size: 1rem;
-  }
-
-  .remove-row {
-    align-self: end;
   }
 
   .primary--split {
@@ -1394,10 +1493,6 @@ input[type="range"] {
 
   .breakdown--radio .radio-meta {
     white-space: normal;
-  }
-
-  input.number::placeholder {
-    font-size: 0.8125rem;
   }
 
   /* The link readout stacks; its chevrons turn to point down. */
