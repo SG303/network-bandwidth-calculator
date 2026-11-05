@@ -32,6 +32,7 @@
               <span>Client type</span><span>Count</span><span>Mbit/s per client</span>
             </div>
             <ul class="mix-rows"></ul>
+            <p class="undo" id="wired-mix-undo" role="status"><span class="undo-text"></span> <button class="undo-button" type="button" hidden>Undo</button></p>
             <button class="button add-row" type="button">+ Add client type</button>
           </section>
 
@@ -49,11 +50,15 @@
             <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective uplink load. Uplink and switch size round up to the next common class, the switch size with 20% port reserve. All defaults are editable and deliberately conservative planning values.</p>
           </details>
 
-          <button class="button reset" type="button" data-reset="wired">Reset</button>
+          <div class="reset-line">
+            <button class="button reset" type="button" data-reset="wired">Reset</button>
+            <p class="undo" id="wired-reset-undo" role="status"><span class="undo-text"></span> <button class="undo-button" type="button" hidden>Undo</button></p>
+          </div>
         </div>
 
-        <div class="plate">
-          <div class="primary" aria-live="polite">
+        <div class="plate" id="wired-results" tabindex="-1" role="region" aria-label="Results">
+          <p class="sr-only" id="wired-announce" role="status"></p>
+          <div class="primary">
             <h2 class="reading-label">Recommended uplink</h2>
             <div class="primary-line">
               <p class="reading reading--hero" id="wired-uplink">—</p>
@@ -66,6 +71,11 @@
                 <span class="mark" style="--at: 85%">85%</span>
               </div>
             </div>
+            <ul class="zone-legend">
+              <li data-zone="ok">0–60% OK</li>
+              <li data-zone="warn">60–85% Borderline</li>
+              <li data-zone="crit">85%+ Overloaded</li>
+            </ul>
             <p class="status-note" id="wired-uplink-note" hidden></p>
           </div>
 
@@ -104,6 +114,17 @@
             <tfoot id="wired-breakdown-total"></tfoot>
           </table>
         </div>
+
+        <a class="readout-strip" id="wired-strip" href="#wired-results" hidden>
+          <span class="strip-reading">
+            <span class="strip-label">Recommended uplink</span>
+            <span class="strip-value" id="wired-strip-value">—</span>
+          </span>
+          <span class="strip-side">
+            <span class="badge" id="wired-strip-badge" hidden></span>
+            <span class="strip-action"><span class="strip-action-text">Show all results</span><span class="strip-go" aria-hidden="true"></span></span>
+          </span>
+        </a>
       </section>
 
       <!-- WLAN -->
@@ -115,6 +136,7 @@
               <span>Client type</span><span>Count</span><span>Mbit/s per client</span>
             </div>
             <ul class="mix-rows"></ul>
+            <p class="undo" id="wlan-mix-undo" role="status"><span class="undo-text"></span> <button class="undo-button" type="button" hidden>Undo</button></p>
             <button class="button add-row" type="button">+ Add client type</button>
           </section>
 
@@ -130,6 +152,7 @@
           <section class="mix radio-list" id="wlan-radios" aria-labelledby="wlan-radios-title">
             <h2 class="block-title" id="wlan-radios-title">AP radios</h2>
             <ul class="mix-rows"></ul>
+            <p class="undo" id="wlan-radios-undo" role="status"><span class="undo-text"></span> <button class="undo-button" type="button" hidden>Undo</button></p>
             <button class="button add-row" type="button">+ Add radio</button>
             <p class="help" id="wlan-radios-help"></p>
           </section>
@@ -140,11 +163,15 @@
             <p>The SNR per MCS is a typical planning value; receivers differ by a few dB. A wider channel collects more noise: in SNR mode the entered SNR drops by 3 dB per doubling of the width (check the field after changing it), in RSSI mode the noise floor does that. All defaults are editable, and a measured capacity can replace the derived one.</p>
           </details>
 
-          <button class="button reset" type="button" data-reset="wlan">Reset</button>
+          <div class="reset-line">
+            <button class="button reset" type="button" data-reset="wlan">Reset</button>
+            <p class="undo" id="wlan-reset-undo" role="status"><span class="undo-text"></span> <button class="undo-button" type="button" hidden>Undo</button></p>
+          </div>
         </div>
 
-        <div class="plate">
-          <div class="primary primary--split" aria-live="polite">
+        <div class="plate" id="wlan-results" tabindex="-1" role="region" aria-label="Results">
+          <p class="sr-only" id="wlan-announce" role="status"></p>
+          <div class="primary primary--split">
             <div class="primary-main">
               <h2 class="reading-label">Utilization</h2>
               <p class="reading reading--hero" id="wlan-utilization">—</p>
@@ -161,6 +188,11 @@
                 <span class="mark" style="--at: 85%">85%</span>
               </div>
             </div>
+            <ul class="zone-legend">
+              <li data-zone="ok">0–60% OK</li>
+              <li data-zone="warn">60–85% Borderline</li>
+              <li data-zone="crit">85%+ Overloaded</li>
+            </ul>
             <p class="badge badge--verdict" id="wlan-verdict" hidden></p>
             <p class="status-note" id="wlan-note" hidden></p>
             <p class="status-note" id="wlan-link-note" hidden></p>
@@ -187,7 +219,7 @@
 
           <section class="compare port" aria-labelledby="wlan-port-title">
             <h3 class="sub-title" id="wlan-port-title">Switch port per AP</h3>
-            <div class="primary-line" aria-live="polite">
+            <div class="primary-line">
               <p class="reading" id="wlan-port">—</p>
               <span class="badge" id="wlan-port-badge" hidden></span>
             </div>
@@ -201,8 +233,9 @@
           <p class="plate-note">Capacity is per radio. A dual-band AP (2.4 + 5/6 GHz) adds the capacity of its second radio.</p>
           <p class="plate-note" id="wlan-streams-note" hidden>4×4 with clients of fewer streams: 3 dB more link margin is added to their SNR, roughly one MCS step or 20% more range at the cell edge. Many 4×4 APs need PoE+ (802.3at) or 802.3bt to run all radios at full power — check the datasheet.</p>
 
+          <div class="table-scroll" role="region" aria-labelledby="wlan-radio-caption">
           <table class="breakdown breakdown--radio">
-            <caption>Load by radio</caption>
+            <caption id="wlan-radio-caption">Load by radio</caption>
             <thead>
               <tr>
                 <th scope="col">Radio</th>
@@ -214,6 +247,7 @@
             </thead>
             <tbody id="wlan-radio-table"></tbody>
           </table>
+          </div>
 
           <table class="breakdown breakdown--radio breakdown--clients">
             <caption>Clients</caption>
@@ -230,6 +264,17 @@
           </table>
           <p class="plate-note">Peak is count × Mbit/s per client, rate is what one client's link delivers. Slower clients need more airtime for the same data; the airtime of all clients on a radio adds up to its utilization.</p>
         </div>
+
+        <a class="readout-strip" id="wlan-strip" href="#wlan-results" hidden>
+          <span class="strip-reading">
+            <span class="strip-label">Recommended APs</span>
+            <span class="strip-value" id="wlan-strip-value">—</span>
+          </span>
+          <span class="strip-side">
+            <span class="badge" id="wlan-strip-badge" hidden></span>
+            <span class="strip-action"><span class="strip-action-text">Show all results</span><span class="strip-go" aria-hidden="true"></span></span>
+          </span>
+        </a>
       </section>
     </main>
 
