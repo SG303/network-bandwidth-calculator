@@ -116,11 +116,15 @@ round trip).
 
 - "Peak demand (all at once)" = S
 - "Effective uplink load (at X% concurrency)" = E
-- "Recommended uplink" = class, with utilization badge "Utilization X%"
+- "Recommended uplink" = class, with utilization badge "Utilization X% – OK"
+  (the verdict word of its zone: OK / Borderline / Overloaded), and a legend
+  under the bar: "0–60% OK", "60–85% Borderline", "85%+ Overloaded"
 - "Access port speed" = class + note "1 Gbit/s is enough for standard
   clients" (above 1 Gbit/s: "Highest single-client demand: …")
 - "Required ports" = N + switch size hint
-- Utilization comparison bars for 1 Gbit/s / 10 Gbit/s / 25 Gbit/s (E / class)
+- Utilization comparison bars for 1 Gbit/s / 10 Gbit/s / 25 Gbit/s (E / class);
+  the recommended class is highlighted and named "(recommended)" for
+  assistive technology
 - "Breakdown by client type" table: count, Mbit/s, subtotal, total row
 
 ### Acceptance example (must match exactly)
@@ -171,7 +175,7 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
     "MCS 7" ("64-QAM 5/6") → "432.4 Mbit/s" ("60% of 720.6 PHY, 2×2
     client"; with an override: the override and "manual capacity"). It
     describes a 2×2 client of the radio's own standard.
-  - Remove button "✕" (accessible name "Remove radio"), hidden while only one
+  - Remove button "✕" (accessible name "Remove radio N"), hidden while only one
     radio exists. Button "+ Add radio", hidden at four radios. Removing a radio
     moves its clients to the first radio. New radios start from the default
     radio; ids stay stable so rows keep their assignment.
@@ -309,7 +313,7 @@ reachable clients, none → no recommendation):
 
 - "Utilization" (hero) = `U` of the limiting radio, with colored CSS bar and %
   (cap bar fill at 100% width, keep the real number as text, e.g. "375%")
-- Verdict badge (worst radio)
+- Verdict badge (worst radio), and the same zone legend as the wired tab
 - "Recommended APs" with note "Recommended APs for this mix (max. 60%
   utilization per AP)"; with more than one radio: "Highest requirement of a
   single radio (max. 60% utilization per AP)"
@@ -340,7 +344,8 @@ reachable clients, none → no recommendation):
   link delivers. Slower clients need more airtime for the same data; the
   airtime of all clients on a radio adds up to its utilization."
 - "Switch port per AP": recommended speed (e.g. "1 Gbit/s") with badge
-  "Utilization X%" (of the recommended speed, zone colors as for the radios),
+  "Utilization X% – OK" (of the recommended speed, zone colors and verdict
+  words as for the radios),
   note "Effective load per AP: …" (prefixed "One port per AP, N in total. "
   with more than one AP), note "Minimum for the typical load: X (Y%
   utilization)", "Cabling for 100 m: …", and a hint: when the recommendation
@@ -396,7 +401,9 @@ reachable clients, none → no recommendation):
 - Layout: two-column grid (inputs left, results right) ≥ 960 px, stacked below.
 - Client-mix component: table-like rows: type select, count (number, min 0,
   step 1), Mbit/s per client (number, min 0, step 0.1), remove button "✕"
-  (accessible name "Remove row"). Button "+ Add client type". Same type may
+  (accessible name "Remove row N: <client type>"). The row controls carry
+  their row in the accessible name ("Count, row N"). Button "+ Add client
+  type". Same type may
   appear in multiple rows. WLAN rows add a "Client" line (standard and
   streams) below the type select, and a "Radio" select (labels like
   "5 GHz (Wi-Fi 6) @ 80 MHz, 2×2") when the AP has more than one radio. The
@@ -405,8 +412,18 @@ reachable clients, none → no recommendation):
   SNR/RSSI switch, the signal value and (RSSI only) the noise floor; the
   link readout.
 - Everything recalculates live on every input change (no calculate button).
+  About a second after the last edit, a polite status summarizes the main
+  result for screen readers.
 - Reset button per tab ("Reset") → restores the tab defaults and clears
   its localStorage entry.
+- Undo: removing a client row or a radio, and Reset, show a status line
+  ("Removed <client type>." / "Inputs reset to the defaults.") with an
+  "Undo" button that restores the previous inputs until the next edit.
+- Below 960 px a result strip on the bottom edge repeats the main reading
+  ("Recommended uplink" / "Recommended APs", utilization with verdict) while
+  the result card is out of view; it links to the results ("Show all
+  results"). Result tables reflow down to 320 px; the per-radio table scrolls
+  inside its own box if it still does not fit.
 - `<details>` "Assumptions & notes" per tab: 2–3 sentences explaining the
   model, stating that all default values are editable and are conservative
   planning values.
@@ -430,8 +447,9 @@ Binding quality floor (everything else is the designer's intentional choice):
   text labels).
 - Utilization bars with the 60/85% thresholds from the formulas.
 - Responsive single column < 960 px; visible keyboard focus states;
-  `prefers-reduced-motion` respected; body text contrast at least WCAG AA.
-- Content column `max-width` ~1100 px centered, line lengths < 80 chars.
+  `prefers-reduced-motion` respected; body text contrast at least WCAG AA;
+  field boundaries at least 3:1; touch targets at least 44 px on phones.
+- Content column `max-width` ~1200 px centered, line lengths < 80 chars.
 - Big result numbers as visual anchors (~1.8rem+ / 700 weight).
 - Number formatting: English (`Intl.NumberFormat('en-US')`), units "Mbit/s",
   "Gbit/s" (use Gbit/s when value ≥ 1000), percentages with one decimal below

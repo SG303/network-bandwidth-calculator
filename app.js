@@ -742,6 +742,11 @@ function setScale(el, ratio) {
   el.classList.toggle('is-over', hasValue && ratio > 1);
 }
 
+// The verdict is spelled out, so the badge does not rely on its colour.
+function utilizationBadgeText(ratio) {
+  return `Utilization ${formatPercent(ratio)} – ${VERDICT_SHORT[utilizationZone(ratio)]}`;
+}
+
 function setBadge(el, text, zone) {
   el.hidden = !text;
   el.textContent = text || '';
@@ -752,6 +757,12 @@ function setNote(el, text, tone) {
   el.hidden = !text;
   el.textContent = text || '';
   el.dataset.tone = tone || '';
+}
+
+// Table cells: number and unit may wrap onto two lines when the column is narrow.
+function rateCellText(mbps) {
+  const { num, unit } = formatRate(mbps);
+  return `${num} ${unit}`;
 }
 
 function renderBreakdown(tab, result) {
@@ -774,7 +785,7 @@ function renderBreakdown(tab, result) {
     tr.insertCell().textContent = TYPE_BY_ID[line.type].label;
     tr.insertCell().textContent = formatNumber(line.count, 0);
     tr.insertCell().textContent = formatNumber(line.mbps);
-    tr.insertCell().textContent = formatRateText(line.subtotal);
+    tr.insertCell().textContent = rateCellText(line.subtotal);
   }
   const tr = foot.insertRow();
   const th = document.createElement('th');
@@ -783,7 +794,22 @@ function renderBreakdown(tab, result) {
   tr.append(th);
   tr.insertCell().textContent = formatNumber(result.clients, 0);
   tr.insertCell();
-  tr.insertCell().textContent = formatRateText(result.demand);
+  tr.insertCell().textContent = rateCellText(result.demand);
+}
+
+// The comparison lists mark the recommended class in text too, not only by tint.
+function setCompareFlag(row, recommended, minimum) {
+  row.classList.toggle('is-recommended', recommended);
+  row.classList.toggle('is-minimum', minimum);
+  row.querySelector('.compare-flag').textContent = recommended ? ' (recommended)' : (minimum ? ' (minimum)' : '');
+}
+
+// Small screens: a strip at the bottom repeats the main reading while the
+// result plate is out of view.
+function setStrip(tab, reading, badgeText, zone) {
+  const value = $(`${tab}-strip-value`);
+  value.textContent = reading ? `${reading.num}${reading.unit ? `${reading.tight ? '' : NBSP}${reading.unit}` : ''}` : '—';
+  setBadge($(`${tab}-strip-badge`), badgeText, zone);
 }
 
 function renderWired() {
@@ -800,7 +826,7 @@ function renderWired() {
   setReading($('wired-uplink'), hasUplink ? formatRate(uplink.gbps * 1000) : null);
   setBadge(
     $('wired-uplink-badge'),
-    hasUplink ? `Utilization ${formatPercent(uplink.utilization)}` : '',
+    hasUplink ? utilizationBadgeText(uplink.utilization) : '',
     hasUplink ? utilizationZone(uplink.utilization) : '',
   );
   setScale($('wired-uplink-scale'), hasUplink ? uplink.utilization : (empty ? null : 2));
@@ -826,10 +852,20 @@ function renderWired() {
     const { utilization } = r.comparison[i];
     setScale(row.querySelector('.scale'), empty ? null : utilization);
     row.querySelector('.compare-value').textContent = empty ? '—' : formatPercent(utilization);
-    row.classList.toggle('is-recommended', hasUplink && uplink.gbps === r.comparison[i].gbps);
+    setCompareFlag(row, hasUplink && uplink.gbps === r.comparison[i].gbps, false);
   });
 
   renderBreakdown('wired', r);
+
+  const uplinkReading = hasUplink ? formatRate(uplink.gbps * 1000) : null;
+  setStrip('wired', uplinkReading, hasUplink ? `${formatPercent(uplink.utilization)} ${VERDICT_SHORT[utilizationZone(uplink.utilization)]}` : '', hasUplink ? utilizationZone(uplink.utilization) : '');
+
+  if (empty) return EMPTY_TEXT;
+  const uplinkText = hasUplink
+    ? `Recommended uplink ${uplinkReading.num} ${uplinkReading.unit}, utilization ${formatPercent(uplink.utilization)}.`
+    : 'Demand exceeds 100 Gbit/s.';
+  return `${uplinkText} Peak demand ${formatRateText(r.peak)}, effective load ${formatRateText(r.effective)}, `
+    + `${formatNumber(r.clients, 0)} ports.`;
 }
 
 function renderWlan() {
@@ -868,6 +904,15 @@ function renderWlan() {
   renderClientTable(r);
   renderRadioStatus(r);
   renderClientStatus(r);
+  syncScrollRegions();
+
+  setStrip('wlan', empty ? null : { num: formatNumber(r.aps, 0), unit: r.aps === 1 ? 'AP' : 'APs' },
+    empty ? '' : `${formatPercent(r.utilization)} ${VERDICT_SHORT[r.verdict]}`, empty ? '' : r.verdict);
+
+  if (empty) return EMPTY_TEXT;
+  const port = r.port && r.port.gbps !== null ? ` Switch port per AP ${formatRateText(r.port.gbps * 1000)}.` : '';
+  return `Recommended APs ${formatNumber(r.aps, 0)}, utilization ${formatPercent(r.utilization)}, `
+    + `${VERDICT_SHORT[r.verdict]}. Effective demand ${formatRateText(r.effective)}.${port}`;
 }
 
 function renderApPort(result) {
@@ -877,7 +922,7 @@ function renderApPort(result) {
   setReading($('wlan-port'), hasPort ? formatRate(port.gbps * 1000) : null);
   setBadge(
     $('wlan-port-badge'),
-    hasPort ? `Utilization ${formatPercent(port.utilization)}` : '',
+    hasPort ? utilizationBadgeText(port.utilization) : '',
     hasPort ? utilizationZone(port.utilization) : '',
   );
 
@@ -906,8 +951,7 @@ function renderApPort(result) {
     const gbps = AP_PORT_CLASSES[i].gbps;
     setScale(row.querySelector('.scale'), port ? utilizationOf(port.load, gbps * 1000) : null);
     row.querySelector('.compare-value').textContent = port ? formatPercent(utilizationOf(port.load, gbps * 1000)) : '—';
-    row.classList.toggle('is-recommended', hasPort && port.gbps === gbps);
-    row.classList.toggle('is-minimum', hasPort && port.minimum.gbps === gbps && port.gbps !== gbps);
+    setCompareFlag(row, hasPort && port.gbps === gbps, hasPort && port.minimum.gbps === gbps && port.gbps !== gbps);
   });
 }
 
@@ -1112,9 +1156,74 @@ function renderClientStatus(result) {
 
 const RENDERERS = { wired: renderWired, wlan: renderWlan };
 
+const announceTimers = {};
+
+// One polite summary after the user pauses, instead of every reading talking.
+function announce(tab, text) {
+  clearTimeout(announceTimers[tab]);
+  announceTimers[tab] = setTimeout(() => {
+    $(`${tab}-announce`).textContent = text;
+  }, 900);
+}
+
 function update(tab, persist = true) {
-  if (persist) saveState(tab, state[tab]);
-  RENDERERS[tab]();
+  if (persist) {
+    saveState(tab, state[tab]);
+    clearUndo(tab);
+  }
+  const summary = RENDERERS[tab]();
+  if (persist) announce(tab, summary);
+}
+
+/* Undo: removing a row or resetting keeps a copy of the inputs until the next edit. */
+
+const undoOffers = {};
+
+function clearUndo(tab) {
+  for (const id of Object.keys(undoOffers)) {
+    if (undoOffers[id].tab !== tab) continue;
+    const note = $(id);
+    note.classList.remove('is-active');
+    note.querySelector('.undo-text').textContent = '';
+    note.querySelector('.undo-button').hidden = true;
+    delete undoOffers[id];
+  }
+}
+
+function offerUndo(tab, id, text, snapshot, focusAfter) {
+  clearUndo(tab);
+  undoOffers[id] = { tab, snapshot, focusAfter };
+  const note = $(id);
+  note.classList.add('is-active');
+  note.querySelector('.undo-text').textContent = text;
+  note.querySelector('.undo-button').hidden = false;
+}
+
+function setupUndo() {
+  document.querySelectorAll('.undo-button').forEach((button) => {
+    button.addEventListener('click', () => {
+      const id = button.closest('.undo').id;
+      const offer = undoOffers[id];
+      if (!offer) return;
+      const { tab, snapshot, focusAfter } = offer;
+      state[tab] = snapshot;
+      renderMix(tab);
+      if (tab === 'wired') syncWiredInputs();
+      else syncWlanInputs();
+      update(tab);
+      const target = focusAfter();
+      if (target) target.focus();
+    });
+  });
+}
+
+/* Tables that can still be too wide on very narrow screens scroll inside
+   their own box; only then do they need a keyboard stop. */
+function syncScrollRegions() {
+  document.querySelectorAll('.table-scroll').forEach((box) => {
+    if (box.scrollWidth > box.clientWidth + 1) box.tabIndex = 0;
+    else box.removeAttribute('tabindex');
+  });
 }
 
 /* Client mix (shared component) */
@@ -1147,7 +1256,25 @@ function buildMixRow(tab, row, index) {
     radioSelect.append(...state.wlan.radios.map((x) => new Option(radioLabel(x), x.id)));
     radioSelect.value = row.radio;
   }
+  labelMixRow(li, tab, row, index);
   return li;
+}
+
+// Every row repeats the same fields, so their names carry the row number;
+// the remove button also names the client type it deletes.
+function labelMixRow(li, tab, row, index) {
+  const n = index + 1;
+  const name = (field, label) => {
+    const el = li.querySelector(`[name="${field}"]`);
+    if (el) el.setAttribute('aria-label', `${label}, row ${n}`);
+  };
+  name('type', 'Client type');
+  name('client', 'Client Wi-Fi standard');
+  name('clientStreams', 'Client spatial streams');
+  name('radio', 'Radio');
+  name('count', 'Count');
+  name('mbps', 'Mbit/s per client');
+  li.querySelector('.remove-row').setAttribute('aria-label', `Remove row ${n}: ${TYPE_BY_ID[row.type].label}`);
 }
 
 function renderMix(tab) {
@@ -1166,6 +1293,7 @@ function setupMix(tab) {
       const preset = TYPE_BY_ID[value];
       row.type = value;
       row.mbps = preset.mbps;
+      labelMixRow(li, tab, row, Number(li.dataset.index));
       li.querySelector('[name="mbps"]').value = row.mbps;
       if (tab === 'wlan') {
         row.client = preset.client;
@@ -1206,9 +1334,12 @@ function setupMix(tab) {
     const removeButton = event.target.closest('.remove-row');
     if (removeButton) {
       const index = Number(removeButton.closest('.mix-row').dataset.index);
-      rows.splice(index, 1);
+      const snapshot = structuredClone(state[tab]);
+      const [removed] = rows.splice(index, 1);
       renderMix(tab);
       update(tab);
+      offerUndo(tab, `${tab}-mix-undo`, `Removed ${TYPE_BY_ID[removed.type].label}.`, snapshot,
+        () => root.querySelectorAll('.mix-row')[index]?.querySelector('select'));
       const next = root.querySelectorAll('.remove-row')[Math.min(index, rows.length - 1)];
       (next || root.querySelector('.add-row')).focus();
     }
@@ -1223,7 +1354,7 @@ function buildComparison(listId, classes) {
     const li = document.createElement('li');
     li.className = 'compare-row';
     li.innerHTML = `
-      <span class="compare-label">${formatRateText(gbps * 1000)}</span>
+      <span class="compare-label">${formatRateText(gbps * 1000)}<span class="sr-only compare-flag"></span></span>
       <div class="scale scale--mini" aria-hidden="true">
         <div class="scale-track"><div class="scale-fill"></div></div>
         <div class="scale-marks"><span class="mark" style="--at: 60%"></span><span class="mark" style="--at: 85%"></span></div>
@@ -1289,7 +1420,9 @@ function buildRadioRow(radio, index) {
     input.name = `signal-mode-${radio.id}`;
   });
   syncRadioRow(li, radio);
-  li.querySelector('.remove-row').hidden = state.wlan.radios.length === 1;
+  const remove = li.querySelector('.remove-row');
+  remove.hidden = state.wlan.radios.length === 1;
+  remove.setAttribute('aria-label', `Remove radio ${index + 1}`);
   return li;
 }
 
@@ -1370,11 +1503,14 @@ function setupWlan() {
     const removeButton = event.target.closest('.remove-row');
     if (!removeButton || radios.length === 1) return;
     const index = Number(removeButton.closest('.mix-row').dataset.index);
+    const snapshot = structuredClone(state.wlan);
     const [removed] = radios.splice(index, 1);
     for (const row of state.wlan.rows) if (row.radio === removed.id) row.radio = radios[0].id;
     renderRadios();
     renderMix('wlan');
     update('wlan');
+    offerUndo('wlan', 'wlan-radios-undo', `Removed radio ${index + 1}, ${profileOf(removed.profile).short}.`, snapshot,
+      () => root.querySelectorAll('.mix-row')[index]?.querySelector('select'));
     root.querySelector('.add-row').focus();
   });
 
@@ -1410,18 +1546,46 @@ function setupTabs() {
   });
 }
 
+/* Result strip: shown on small screens while the result plate is out of view. */
+
+function setupStrips() {
+  if (!('IntersectionObserver' in window)) return;
+  const narrow = window.matchMedia('(max-width: 959px)');
+  for (const tab of ['wired', 'wlan']) {
+    const strip = $(`${tab}-strip`);
+    const plate = $(`${tab}-results`);
+    let plateVisible = true;
+    const sync = () => {
+      strip.hidden = !narrow.matches || plateVisible;
+    };
+    new IntersectionObserver(([entry]) => {
+      plateVisible = entry.isIntersecting;
+      sync();
+    }).observe(plate);
+    narrow.addEventListener('change', sync);
+    strip.addEventListener('click', (event) => {
+      event.preventDefault();
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      plate.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+      plate.focus({ preventScroll: true });
+    });
+  }
+}
+
 /* Reset */
 
 function setupReset() {
   document.querySelectorAll('[data-reset]').forEach((button) => {
     button.addEventListener('click', () => {
       const tab = button.dataset.reset;
+      const snapshot = structuredClone(state[tab]);
       state[tab] = cloneDefaults(tab);
       clearState(tab);
       renderMix(tab);
       if (tab === 'wired') syncWiredInputs();
       else syncWlanInputs();
       update(tab, false);
+      offerUndo(tab, `${tab}-reset-undo`, 'Inputs reset to the defaults.', snapshot, () => button);
     });
   });
 }
@@ -1436,6 +1600,9 @@ function init() {
   setupWired();
   setupWlan();
   setupReset();
+  setupUndo();
+  setupStrips();
+  window.addEventListener('resize', syncScrollRegions);
 
   renderMix('wired');
   renderMix('wlan');
