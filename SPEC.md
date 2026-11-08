@@ -147,7 +147,7 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
   hidden while the AP has only one radio.
 - Radio list "AP radios": 1–4 radios (**default: one**, see below). Every radio
   has:
-  - Dropdown "Radio" (band + standard combined):
+  - Dropdown "Band and standard" (band + standard combined):
     - `2g`: "2.4 GHz (Wi-Fi 4/6)" — widths 20/40, rates as 802.11ax
     - `5g-ac`: "5 GHz – Wi-Fi 5 (802.11ac)" — widths 20/40/80
     - `5g-ax`: "5 GHz – Wi-Fi 6 (802.11ax)" — widths 20/40/80/160 — **default**
@@ -156,20 +156,21 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
   - Dropdown "Channel width" (MHz), filtered by profile, **default 80**.
   - Dropdown "Spatial streams": "2×2" (**default**) or "4×4", for every
     profile.
-  - Number field "Capacity (Mbit/s)" — empty (placeholder "auto") means the
-    capacity is derived from the signal, a value > 0 overrides it (e.g. a
-    measured value). Profile, width and streams changes clear the override.
+  - Number field "Capacity" (unit "Mbit/s" inside the window) — empty
+    (placeholder "auto") means the capacity is derived from the signal, a
+    value > 0 overrides it (e.g. a measured value). Profile, width and
+    streams changes clear the override.
   - Two-position switch "Signal": "SNR" (**default**) or "RSSI", then a
-    number field "SNR (dB)" or "RSSI (dBm)". In RSSI mode a third field
-    "Noise floor (dBm)" appears: empty means auto (placeholder "auto −89"),
-    a value overrides it. Switching the mode converts the value so the planned
-    SNR stays the same (RSSI = SNR + noise floor). A band change resets signal
-    and noise floor to the band defaults; a width change clears an entered
-    noise floor. In SNR mode a width change also moves the entered SNR by
-    −3 dB per doubling of the width (+3 dB per halving), clamped to 0–60 dB,
-    because a wider channel collects more noise at the same received signal;
-    in RSSI mode the noise floor does that. An empty or invalid SNR is left
-    alone.
+    number field "SNR" (unit "dB") or "RSSI" (unit "dBm"). In RSSI mode a
+    third field "Noise" (unit "dBm", the noise floor) appears: empty means
+    auto (placeholder "auto −89"), a value overrides it. Switching the mode
+    converts the value so the planned SNR stays the same (RSSI = SNR +
+    noise floor). A band change resets signal and noise floor to the band
+    defaults; a width change clears an entered noise floor. In SNR mode a
+    width change also moves the entered SNR by −3 dB per doubling of the
+    width (+3 dB per halving), clamped to 0–60 dB, because a wider channel
+    collects more noise at the same received signal; in RSSI mode the noise
+    floor does that. An empty or invalid SNR is left alone.
   - A link readout under the fields, in three steps: "SNR 25 dB" (source:
     "signal to noise", "−64 dBm over −89 dBm noise", "+3 dB for 4×4") →
     "MCS 7" ("64-QAM 5/6") → "432.4 Mbit/s" ("60% of 720.6 PHY, 2×2
@@ -494,16 +495,16 @@ Binding quality floor (everything else is the designer's intentional choice):
 
 ## Acceptance criteria
 
-- [ ] `index.html` opens via `file://` in a current Chrome/Firefox, zero
+- [x] `index.html` opens via `file://` in a current Chrome/Firefox, zero
       console errors, no external network requests.
-- [ ] All acceptance examples above produce exactly the documented numbers;
+- [x] All acceptance examples above produce exactly the documented numbers;
       `node --test` passes.
-- [ ] Live recalculation on every input; tab switching keeps both states.
-- [ ] Inputs persist in localStorage (`nbc-wired-v1`, `nbc-wlan-v1`) across
+- [x] Live recalculation on every input; tab switching keeps both states.
+- [x] Inputs persist in localStorage (`nbc-wired-v1`, `nbc-wlan-v1`) across
       reloads; reset works.
-- [ ] Responsive single-column layout below 960 px.
-- [ ] English UI strings exactly as specified; code/comments in English.
-- [ ] No overengineering: three app files (plus the test file), no
+- [x] Responsive single-column layout below 960 px.
+- [x] English UI strings exactly as specified; code/comments in English.
+- [x] No overengineering: three app files (plus the test file), no
       abstractions beyond what is useful.
 
 ## README (update existing)
