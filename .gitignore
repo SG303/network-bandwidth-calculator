@@ -8,3 +8,8 @@ desktop.ini
 .idea/
 *.swp
 *~
+
+# Local secrets
+.env
+.env.*
+!.env.example
