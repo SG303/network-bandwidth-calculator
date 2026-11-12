@@ -10,6 +10,9 @@ the switch size, and the load on a WLAN access point, including a verdict and
 the recommended number of APs. Every number updates live, so it can be used
 directly in customer conversations to justify sizing decisions.
 
+> [!NOTE]
+> Personal project, built with AI coding agents under my supervision. Review the code carefully before you use it.
+
 ## Run
 
 Open `index.html` in a current browser (works offline via `file://`), or serve
@@ -73,6 +76,12 @@ radio/client/SNR combination and the migration of saved states.
 
 All values are planning estimates based on simple, transparent assumptions.
 They do not replace a site survey or a measurement.
+
+## Status
+
+Personal project, built with AI coding agents under my supervision. There is
+no support and no stability guarantee; review the code carefully before you
+rely on it. See [LICENSE](LICENSE) for the warranty terms.
 
 ## License
 
