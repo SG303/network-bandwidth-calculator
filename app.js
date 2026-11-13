@@ -900,16 +900,11 @@ function renderWlan() {
   renderLinkNote(r);
 
   setReading($('wlan-aps'), empty ? null : { num: formatNumber(r.aps, 0) });
-  $('wlan-aps-note').textContent = single
-    ? 'Recommended APs for this mix (max. 60% utilization per AP)'
-    : 'Highest requirement of a single radio (max. 60% utilization per AP)';
 
   $('wlan-capacity-label').textContent = single ? 'AP capacity (usable throughput)' : 'Capacity, limiting radio';
-  $('wlan-per-client-label').textContent = single ? 'Avg. bandwidth per client' : 'Avg. per client, limiting radio';
   setReading($('wlan-peak'), empty ? null : formatRate(r.peak));
   setReading($('wlan-effective'), empty ? null : formatRate(r.effective));
   setReading($('wlan-capacity-out'), empty ? null : formatRate(r.capacity));
-  setReading($('wlan-per-client'), empty ? null : formatRate(r.perClient));
 
   renderApPort(r);
 
@@ -935,32 +930,36 @@ function renderApPort(result) {
   const hasPort = !!port && port.gbps !== null;
 
   setReading($('wlan-port'), hasPort ? formatRate(port.gbps * 1000) : null);
+  const count = result.aps > 1 ? `One port per AP, ${formatNumber(result.aps, 0)} in total. ` : '';
+  $('wlan-port-note').textContent = hasPort ? `${count}Cabling for 100 m: ${port.cabling}` : '';
+
+  // Only problems show on the plate; how the speed was chosen is in the details.
+  const hint = $('wlan-port-hint');
+  let peaks = '';
+  if (!port) setNote(hint, '');
+  else if (!hasPort) setNote(hint, 'The load per AP exceeds what a 10 Gbit/s port carries – check the measured capacity.', 'crit');
+  else if (port.capped) {
+    setNote(hint, `The radios can deliver up to ${formatRateText(port.ceiling)} per AP, more than this port carries. `
+      + 'The typical load fits, but single peaks are capped at the port speed.', 'warn');
+  } else {
+    setNote(hint, '');
+    peaks = port.gbps > port.minimum.gbps
+      ? `The radios can deliver up to ${formatRateText(port.ceiling)} per AP. `
+        + `The minimum carries the typical load; ${formatRateText(port.gbps * 1000)} also leaves room for single peaks.`
+      : `The radios can deliver up to ${formatRateText(port.ceiling)} per AP, so ${formatRateText(port.gbps * 1000)} `
+        + 'also leaves room for single peaks.';
+  }
+
+  $('wlan-port-load').textContent = port ? `Effective load per AP: ${formatRateText(port.load)}` : 'No load on any radio.';
   setBadge(
     $('wlan-port-badge'),
     hasPort ? utilizationBadgeText(port.utilization) : '',
     hasPort ? utilizationZone(port.utilization) : '',
   );
-
-  const count = result.aps > 1 ? `One port per AP, ${formatNumber(result.aps, 0)} in total. ` : '';
-  $('wlan-port-note').textContent = port ? `${count}Effective load per AP: ${formatRateText(port.load)}` : '';
   $('wlan-port-minimum').textContent = hasPort
     ? `Minimum for the typical load: ${formatRateText(port.minimum.gbps * 1000)} (${formatPercent(port.minimum.utilization)} utilization)`
     : '';
-  $('wlan-port-cabling').textContent = hasPort ? `Cabling for 100 m: ${port.cabling}` : '';
-
-  const hint = $('wlan-port-hint');
-  if (!port) setNote(hint, '');
-  else if (!hasPort) setNote(hint, 'The load per AP exceeds what a 10 Gbit/s port carries – check the capacity override.', 'crit');
-  else if (port.capped) {
-    setNote(hint, `The radios can deliver up to ${formatRateText(port.ceiling)} per AP, more than this port carries. `
-      + 'The typical load fits, but single peaks are capped at the port speed.', 'warn');
-  } else if (port.gbps > port.minimum.gbps) {
-    setNote(hint, `The radios can deliver up to ${formatRateText(port.ceiling)} per AP. `
-      + `The minimum carries the typical load; ${formatRateText(port.gbps * 1000)} also leaves room for single peaks.`);
-  } else {
-    setNote(hint, `The radios can deliver up to ${formatRateText(port.ceiling)} per AP, so ${formatRateText(port.gbps * 1000)} `
-      + 'also leaves room for single peaks.');
-  }
+  $('wlan-port-peaks').textContent = peaks;
 
   $('wlan-port-compare').querySelectorAll('.compare-row').forEach((row, i) => {
     const gbps = AP_PORT_CLASSES[i].gbps;
@@ -1032,8 +1031,15 @@ function renderRadioTable(result) {
     const snr = radio.capacityManual ? 'manual capacity' : `SNR ${formatDb(radio.signal.snr, 'dB')}`;
     tr.append(radioHeader(radio, [`@ ${radio.width} MHz, ${streamsLabel(radio.streams)},`, snr]));
     tr.insertCell().textContent = formatNumber(radio.effective);
-    tr.insertCell().textContent = formatNumber(radio.capacity);
+    const capacity = tr.insertCell();
+    capacity.textContent = formatNumber(radio.capacity);
     const active = radio.clients > 0;
+    if (active) {
+      const share = document.createElement('span');
+      share.className = 'cell-sub';
+      share.textContent = `${formatNumber(radio.perClient)} per client`;
+      capacity.append(share);
+    }
     verdictCell(tr, formatPercent(radio.utilization), active ? VERDICT_SHORT[radio.verdict] : 'idle', active ? radio.verdict : '');
     tr.insertCell().textContent = active ? formatNumber(radio.aps, 0) : '—';
   }
@@ -1109,8 +1115,8 @@ function setStep(li, step, text, tone) {
   else delete el.dataset.tone;
 }
 
-// Live readout per radio: SNR → MCS → usable rate for a 2×2 client of the
-// radio's own standard, plus the validation state of its fields.
+// Live readout per radio, one line: SNR → MCS → usable rate for a 2×2 client
+// of the radio's own standard, plus the validation state of its fields.
 function renderRadioStatus(result) {
   const rows = $('wlan-radios').querySelectorAll('.mix-row');
   const errors = [];
@@ -1128,11 +1134,12 @@ function renderRadioStatus(result) {
     setInvalid(li.querySelector('[name="capacity"]'), radio.capacityInvalid);
 
     const sources = [];
-    if (rssi && !signal.signalError) sources.push(`${formatDb(signal.rssi, 'dBm')} over ${formatDb(signal.noise, 'dBm')} noise`);
-    else if (signal.signalError) sources.push(`default ${formatDb(signal.snr, 'dB')}`);
+    if (signal.signalError) sources.push(`default ${formatDb(signal.snr, 'dB')}`);
     if (link.gain) sources.push(`+${link.gain} dB for 4×4`);
     setStep(li, 'snr', `SNR ${formatDb(link.snr, 'dB')}`);
-    setStep(li, 'snr-sub', sources.join(', ') || 'signal to noise');
+    setStep(li, 'snr-sub', sources.join(', '));
+    // The SNR step only shows when it differs from what the field above says.
+    li.querySelector('[data-step="snr"]').parentElement.hidden = !rssi && sources.length === 0;
     setStep(li, 'mcs', `MCS ${link.mcs}`, link.belowFloor ? 'crit' : '');
     setStep(li, 'mcs-sub', link.belowFloor ? `below ${MCS_TABLE[0].snr} dB, unstable` : mcsText(link.mcs), link.belowFloor ? 'crit' : '');
     if (radio.capacityManual) {
@@ -1156,9 +1163,8 @@ function renderRadioStatus(result) {
     }
   });
   const help = $('wlan-radios-help');
-  help.textContent = errors[0]
-    || 'The SNR sets the MCS; 60% of its PHY rate is usable capacity. Leave capacity empty for auto, or enter a measured value.';
-  help.classList.toggle('is-error', errors.length > 0);
+  help.textContent = errors[0] || '';
+  help.hidden = errors.length === 0;
 }
 
 // Rows whose clients cannot use their radio's band get their standard flagged.
@@ -1469,6 +1475,11 @@ function buildRadioRow(radio, index) {
   const remove = li.querySelector('.remove-row');
   remove.hidden = single;
   remove.setAttribute('aria-label', `Remove radio ${index + 1}`);
+  // The measured capacity replaces the derived one; its field only shows once
+  // it is asked for or holds a value.
+  const measured = radio.capacity !== null && radio.capacity !== undefined;
+  li.querySelector('[name="override"]').hidden = measured;
+  li.querySelector('.cell--capacity').hidden = !measured;
   return li;
 }
 
@@ -1541,6 +1552,14 @@ function setupWlan() {
 
   root.addEventListener('click', (event) => {
     const radios = state.wlan.radios;
+    const override = event.target.closest('[name="override"]');
+    if (override) {
+      const field = override.closest('.mix-row').querySelector('.cell--capacity');
+      override.hidden = true;
+      field.hidden = false;
+      field.querySelector('input').focus();
+      return;
+    }
     if (event.target.closest('.add-row')) {
       if (radios.length >= MAX_RADIOS) return;
       radios.push(newRadio(radios));
@@ -1653,6 +1672,8 @@ function init() {
   setupUndo();
   setupStrips();
   window.addEventListener('resize', syncScrollRegions);
+  // A table inside closed details has no width; check again when one opens.
+  document.addEventListener('toggle', syncScrollRegions, true);
   window.addEventListener('resize', () => fitPicks(document));
   document.addEventListener('change', (event) => {
     if (event.target.matches('select.pick')) fitPick(event.target);

@@ -68,48 +68,52 @@
                 <span class="mark" style="--at: 85%">85%</span>
               </div>
             </div>
-            <ul class="zone-legend">
-              <li data-zone="ok">0–60% OK</li>
-              <li data-zone="warn">60–85% Borderline</li>
-              <li data-zone="crit">85%+ Overloaded</li>
-            </ul>
             <p class="status-note" id="wired-uplink-note" hidden></p>
+            <dl class="answers">
+              <div class="answer">
+                <dt>Access port speed</dt>
+                <dd class="reading" id="wired-access">—</dd>
+                <dd class="reading-note" id="wired-access-note"></dd>
+              </div>
+              <div class="answer">
+                <dt>Required ports</dt>
+                <dd class="reading" id="wired-ports">—</dd>
+                <dd class="reading-note" id="wired-switch"></dd>
+              </div>
+            </dl>
           </div>
 
-          <dl class="readings">
-            <div class="reading-cell">
+          <dl class="figures">
+            <div class="figure">
               <dt>Peak demand (all at once)</dt>
-              <dd class="reading" id="wired-peak">—</dd>
+              <dd id="wired-peak">—</dd>
             </div>
-            <div class="reading-cell">
+            <div class="figure">
               <dt id="wired-effective-label">Effective uplink load (at 25% concurrency)</dt>
-              <dd class="reading" id="wired-effective">—</dd>
-            </div>
-            <div class="reading-cell">
-              <dt>Access port speed</dt>
-              <dd class="reading" id="wired-access">—</dd>
-              <dd class="reading-note" id="wired-access-note"></dd>
-            </div>
-            <div class="reading-cell">
-              <dt>Required ports</dt>
-              <dd class="reading" id="wired-ports">—</dd>
-              <dd class="reading-note" id="wired-switch"></dd>
+              <dd id="wired-effective">—</dd>
             </div>
           </dl>
 
-          <section class="compare" aria-labelledby="wired-compare-title">
-            <h3 class="sub-title" id="wired-compare-title">Utilization by uplink class</h3>
-            <ul class="compare-list" id="wired-compare"></ul>
-          </section>
-
-          <table class="breakdown">
-            <caption>Breakdown by client type</caption>
-            <thead>
-              <tr><th scope="col">Client type</th><th scope="col">Count</th><th scope="col">Mbit/s</th><th scope="col">Subtotal</th></tr>
-            </thead>
-            <tbody id="wired-breakdown"></tbody>
-            <tfoot id="wired-breakdown-total"></tfoot>
-          </table>
+          <div class="more">
+            <details class="more-item">
+              <summary id="wired-compare-title">Utilization by uplink class</summary>
+              <div class="more-body">
+                <ul class="compare-list" id="wired-compare" aria-labelledby="wired-compare-title"></ul>
+              </div>
+            </details>
+            <details class="more-item">
+              <summary id="wired-breakdown-title">Breakdown by client type</summary>
+              <div class="more-body">
+                <table class="breakdown" aria-labelledby="wired-breakdown-title">
+                  <thead>
+                    <tr><th scope="col">Client type</th><th scope="col">Count</th><th scope="col">Mbit/s</th><th scope="col">Subtotal</th></tr>
+                  </thead>
+                  <tbody id="wired-breakdown"></tbody>
+                  <tfoot id="wired-breakdown-total"></tfoot>
+                </table>
+              </div>
+            </details>
+          </div>
         </div>
 
         <a class="readout-strip" id="wired-strip" href="#wired-results" hidden>
@@ -148,12 +152,12 @@
             <ul class="mix-rows"></ul>
             <p class="undo" id="wlan-radios-undo" role="status"><span class="undo-text"></span> <button class="undo-button" type="button" hidden>Undo</button></p>
             <button class="button add-row" type="button">+ Add radio</button>
-            <p class="help" id="wlan-radios-help"></p>
+            <p class="help is-error" id="wlan-radios-help" hidden></p>
           </section>
 
           <details class="assumptions">
             <summary>Assumptions &amp; notes</summary>
-            <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective load on a radio. The capacity follows from the signal: the SNR (entered directly, or as RSSI minus the noise floor, which rises 3 dB per doubling of the channel width) selects the highest MCS a typical receiver decodes. The client gets the common standard, width and streams of both sides, and 60% of that PHY rate is usable after contention, overhead and retries. 2.4 GHz plans with a lower SNR because interference costs it more than its noise floor shows. Each client type takes the airtime its demand needs at its rate, and the airtime of a radio's clients is its utilization. Up to 60% one AP is enough; above 85% it is overloaded. One AP carries all of its radios, so the radio with the highest requirement sets the recommendation. The switch port per AP is recommended with room for peaks: at least the smallest of 1 / 2.5 / 5 / 10 Gbit/s that carries everything its radios can deliver together. The minimum for the typical load (the effective load of one AP, radios capped at their capacity, at up to 85% utilization) is shown below it. A 4×4 radio adds 3 dB of link margin for clients with fewer streams; MU-MIMO is not counted.</p>
+            <p>Peak demand is the sum of count × bandwidth for all clients; multiplied by concurrency, it gives the effective load on a radio. The capacity follows from the signal: the SNR (entered directly, or as RSSI minus the noise floor, which rises 3 dB per doubling of the channel width) selects the highest MCS a typical receiver decodes. The client gets the common standard, width and streams of both sides, and 60% of that PHY rate is usable after contention, overhead and retries. 2.4 GHz plans with a lower SNR because interference costs it more than its noise floor shows. Each client type takes the airtime its demand needs at its rate, and the airtime of a radio's clients is its utilization. Up to 60% one AP is enough; above 85% it is overloaded. One AP carries all of its radios, so the radio with the highest requirement sets the recommendation. The switch port per AP is recommended with room for peaks: at least the smallest of 1 / 2.5 / 5 / 10 Gbit/s that carries everything its radios can deliver together. The minimum for the typical load (the effective load of one AP, radios capped at their capacity, at up to 85% utilization) is listed in the switch port details. A 4×4 radio adds 3 dB of link margin for clients with fewer streams; MU-MIMO is not counted.</p>
             <p>The SNR per MCS is a typical planning value; receivers differ by a few dB. A wider channel collects more noise: in SNR mode the entered SNR drops by 3 dB per doubling of the width (check the field after changing it), in RSSI mode the noise floor does that. All defaults are editable, and a measured capacity can replace the derived one.</p>
           </details>
 
@@ -167,13 +171,12 @@
           <p class="sr-only" id="wlan-announce" role="status"></p>
           <div class="primary primary--split">
             <div class="primary-main">
-              <h2 class="reading-label">Utilization</h2>
-              <p class="reading reading--hero" id="wlan-utilization">—</p>
-            </div>
-            <div class="primary-side">
               <h2 class="reading-label">Recommended APs</h2>
               <p class="reading reading--hero" id="wlan-aps">—</p>
-              <p class="reading-note" id="wlan-aps-note">Recommended APs for this mix (max. 60% utilization per AP)</p>
+            </div>
+            <div class="primary-side">
+              <h2 class="reading-label">Utilization</h2>
+              <p class="reading reading--hero" id="wlan-utilization">—</p>
             </div>
             <div class="scale scale--hero" id="wlan-scale" aria-hidden="true">
               <div class="scale-track"><div class="scale-fill"></div></div>
@@ -182,81 +185,87 @@
                 <span class="mark" style="--at: 85%">85%</span>
               </div>
             </div>
-            <ul class="zone-legend">
-              <li data-zone="ok">0–60% OK</li>
-              <li data-zone="warn">60–85% Borderline</li>
-              <li data-zone="crit">85%+ Overloaded</li>
-            </ul>
             <p class="badge badge--verdict" id="wlan-verdict" hidden></p>
             <p class="status-note" id="wlan-note" hidden></p>
             <p class="status-note" id="wlan-link-note" hidden></p>
+            <dl class="answers">
+              <div class="answer">
+                <dt>Switch port per AP</dt>
+                <dd class="reading" id="wlan-port">—</dd>
+                <dd class="reading-note" id="wlan-port-note"></dd>
+              </div>
+            </dl>
+            <p class="status-note" id="wlan-port-hint" hidden></p>
           </div>
 
-          <dl class="readings">
-            <div class="reading-cell">
+          <dl class="figures">
+            <div class="figure">
               <dt>Peak demand (all at once)</dt>
-              <dd class="reading" id="wlan-peak">—</dd>
+              <dd id="wlan-peak">—</dd>
             </div>
-            <div class="reading-cell">
+            <div class="figure">
               <dt id="wlan-effective-label">Effective demand (at 25% concurrency)</dt>
-              <dd class="reading" id="wlan-effective">—</dd>
+              <dd id="wlan-effective">—</dd>
             </div>
-            <div class="reading-cell">
+            <div class="figure">
               <dt id="wlan-capacity-label">AP capacity (usable throughput)</dt>
-              <dd class="reading" id="wlan-capacity-out">—</dd>
-            </div>
-            <div class="reading-cell">
-              <dt id="wlan-per-client-label">Avg. bandwidth per client</dt>
-              <dd class="reading" id="wlan-per-client">—</dd>
+              <dd id="wlan-capacity-out">—</dd>
             </div>
           </dl>
 
-          <section class="compare port" aria-labelledby="wlan-port-title">
-            <h3 class="sub-title" id="wlan-port-title">Switch port per AP</h3>
-            <div class="primary-line">
-              <p class="reading" id="wlan-port">—</p>
-              <span class="badge" id="wlan-port-badge" hidden></span>
-            </div>
-            <p class="reading-note" id="wlan-port-note"></p>
-            <p class="reading-note" id="wlan-port-minimum"></p>
-            <p class="reading-note" id="wlan-port-cabling"></p>
-            <p class="status-note" id="wlan-port-hint" hidden></p>
-            <ul class="compare-list" id="wlan-port-compare"></ul>
-          </section>
-
-          <p class="plate-note">Capacity is per radio. A dual-band AP (2.4 + 5/6 GHz) adds the capacity of its second radio.</p>
-          <p class="plate-note" id="wlan-streams-note" hidden>4×4 with clients of fewer streams: 3 dB more link margin is added to their SNR, roughly one MCS step or 20% more range at the cell edge. Many 4×4 APs need PoE+ (802.3at) or 802.3bt to run all radios at full power — check the datasheet.</p>
-
-          <div class="table-scroll" role="region" aria-labelledby="wlan-radio-caption">
-          <table class="breakdown breakdown--radio">
-            <caption id="wlan-radio-caption">Load by radio</caption>
-            <thead>
-              <tr>
-                <th scope="col">Radio</th>
-                <th scope="col">Effective<br><span class="th-unit">Mbit/s</span></th>
-                <th scope="col">Capacity<br><span class="th-unit">Mbit/s</span></th>
-                <th scope="col">Utilization</th>
-                <th scope="col">APs</th>
-              </tr>
-            </thead>
-            <tbody id="wlan-radio-table"></tbody>
-          </table>
+          <div class="more">
+            <details class="more-item">
+              <summary id="wlan-radio-title">Load by radio</summary>
+              <div class="more-body">
+                <div class="table-scroll" role="region" aria-labelledby="wlan-radio-title">
+                <table class="breakdown breakdown--radio" aria-labelledby="wlan-radio-title">
+                  <thead>
+                    <tr>
+                      <th scope="col">Radio</th>
+                      <th scope="col">Effective<br><span class="th-unit">Mbit/s</span></th>
+                      <th scope="col">Capacity<br><span class="th-unit">Mbit/s</span></th>
+                      <th scope="col">Utilization</th>
+                      <th scope="col">APs</th>
+                    </tr>
+                  </thead>
+                  <tbody id="wlan-radio-table"></tbody>
+                </table>
+                </div>
+                <p class="plate-note">Capacity is per radio, and "per client" is that capacity divided by the radio's clients. A dual-band AP (2.4 + 5/6 GHz) adds the capacity of its second radio. One AP is recommended up to 60% utilization per radio.</p>
+                <p class="plate-note" id="wlan-streams-note" hidden>4×4 with clients of fewer streams: 3 dB more link margin is added to their SNR, roughly one MCS step or 20% more range at the cell edge. Many 4×4 APs need PoE+ (802.3at) or 802.3bt to run all radios at full power — check the datasheet.</p>
+              </div>
+            </details>
+            <details class="more-item">
+              <summary id="wlan-clients-title">Airtime by client type</summary>
+              <div class="more-body">
+                <table class="breakdown breakdown--radio breakdown--clients" aria-labelledby="wlan-clients-title">
+                  <thead>
+                    <tr>
+                      <th scope="col">Client type</th>
+                      <th scope="col">Peak<br><span class="th-unit">Mbit/s</span></th>
+                      <th scope="col">Rate<br><span class="th-unit">Mbit/s</span></th>
+                      <th scope="col">Airtime<br><span class="th-unit">of its radio</span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="wlan-clients"></tbody>
+                  <tfoot id="wlan-clients-total"></tfoot>
+                </table>
+                <p class="plate-note">Peak is count × Mbit/s per client, rate is what one client's link delivers. Slower clients need more airtime for the same data; the airtime of all clients on a radio adds up to its utilization.</p>
+              </div>
+            </details>
+            <details class="more-item">
+              <summary id="wlan-port-title">Switch port details</summary>
+              <div class="more-body port">
+                <div class="primary-line">
+                  <p class="reading-note" id="wlan-port-load"></p>
+                  <span class="badge" id="wlan-port-badge" hidden></span>
+                </div>
+                <p class="reading-note" id="wlan-port-minimum"></p>
+                <p class="reading-note" id="wlan-port-peaks"></p>
+                <ul class="compare-list" id="wlan-port-compare" aria-label="Utilization by port speed"></ul>
+              </div>
+            </details>
           </div>
-
-          <table class="breakdown breakdown--radio breakdown--clients">
-            <caption>Clients</caption>
-            <thead>
-              <tr>
-                <th scope="col">Client type</th>
-                <th scope="col">Peak<br><span class="th-unit">Mbit/s</span></th>
-                <th scope="col">Rate<br><span class="th-unit">Mbit/s</span></th>
-                <th scope="col">Airtime<br><span class="th-unit">of its radio</span></th>
-              </tr>
-            </thead>
-            <tbody id="wlan-clients"></tbody>
-            <tfoot id="wlan-clients-total"></tfoot>
-          </table>
-          <p class="plate-note">Peak is count × Mbit/s per client, rate is what one client's link delivers. Slower clients need more airtime for the same data; the airtime of all clients on a radio adds up to its utilization.</p>
         </div>
 
         <a class="readout-strip" id="wlan-strip" href="#wlan-results" hidden>
@@ -335,7 +344,8 @@
             <span class="win-unit">dBm</span>
           </span>
         </label>
-        <label class="win-field win-field--end">
+        <button class="text-button" type="button" name="override" title="Replace the derived capacity with a measured value">Set capacity</button>
+        <label class="win-field cell--capacity" hidden>
           <span>Capacity</span>
           <span class="win">
             <input class="win-input" type="number" name="capacity" min="0" step="1" inputmode="decimal" placeholder="auto">
@@ -343,11 +353,11 @@
           </span>
         </label>
       </div>
-      <div class="link-readout" aria-live="polite">
-        <p class="link-step"><span class="link-value" data-step="snr"></span><span class="link-sub" data-step="snr-sub"></span></p>
-        <p class="link-step"><span class="link-value" data-step="mcs"></span><span class="link-sub" data-step="mcs-sub"></span></p>
-        <p class="link-step"><span class="link-value" data-step="rate"></span><span class="link-sub" data-step="rate-sub"></span></p>
-      </div>
+      <p class="link-readout" aria-live="polite">
+        <span class="link-step"><span class="link-value" data-step="snr"></span> <span class="link-sub" data-step="snr-sub"></span></span>
+        <span class="link-step"><span class="link-value" data-step="mcs"></span> <span class="link-sub" data-step="mcs-sub"></span></span>
+        <span class="link-step"><span class="link-value" data-step="rate"></span> <span class="link-sub" data-step="rate-sub"></span></span>
+      </p>
     </li>
   </template>
 </body>
