@@ -112,19 +112,29 @@ round trip).
   reserve)". The 52-port class is not stacked: its four extra ports are
   usually uplink/stacking ports, which every switch of a stack needs.
 
-### Outputs (result cards + breakdown table)
+### Outputs (display window, figures, details)
 
-- "Peak demand (all at once)" = S
-- "Effective uplink load (at X% concurrency)" = E
+The result plate answers first and folds the rest away (see "UI / UX").
+
+Display window:
+
 - "Recommended uplink" = class, with utilization badge "Utilization X% – OK"
-  (the verdict word of its zone: OK / Borderline / Overloaded), and a legend
-  under the bar: "0–60% OK", "60–85% Borderline", "85%+ Overloaded"
+  (the verdict word of its zone: OK / Borderline / Overloaded) and the scale
+  with its 60% / 85% marks
 - "Access port speed" = class + note "1 Gbit/s is enough for standard
   clients" (above 1 Gbit/s: "Highest single-client demand: …")
 - "Required ports" = N + switch size hint
-- Utilization comparison bars for 1 Gbit/s / 10 Gbit/s / 25 Gbit/s (E / class);
-  the recommended class is highlighted and named "(recommended)" for
-  assistive technology
+
+Figures:
+
+- "Peak demand (all at once)" = S
+- "Effective uplink load (at X% concurrency)" = E
+
+Details (collapsed):
+
+- "Utilization by uplink class": comparison bars for 1 Gbit/s / 10 Gbit/s /
+  25 Gbit/s (E / class); the recommended class is highlighted and named
+  "(recommended)" for assistive technology
 - "Breakdown by client type" table: count, Mbit/s, subtotal, total row
 
 ### Acceptance example (must match exactly)
@@ -156,10 +166,12 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
   - Dropdown "Channel width" (MHz), filtered by profile, **default 80**.
   - Dropdown "Spatial streams": "2×2" (**default**) or "4×4", for every
     profile.
-  - Number field "Capacity" (unit "Mbit/s" inside the window) — empty
-    (placeholder "auto") means the capacity is derived from the signal, a
-    value > 0 overrides it (e.g. a measured value). Profile, width and
-    streams changes clear the override.
+  - Button "Set capacity" at the end of the signal line. It reveals the
+    number field "Capacity" (unit "Mbit/s" inside the window) and moves the
+    focus there; a radio that already has a capacity shows the field right
+    away. Empty (placeholder "auto") means the capacity is derived from the
+    signal, a value > 0 overrides it (e.g. a measured value). Profile, width
+    and streams changes clear the override.
   - Two-position switch "Signal": "SNR" (**default**) or "RSSI", then a
     number field "SNR" (unit "dB") or "RSSI" (unit "dBm"). In RSSI mode a
     third field "Noise" (unit "dBm", the noise floor) appears: empty means
@@ -171,18 +183,19 @@ Default mix (10 × 2 + 5 × 25), concurrency 25%:
     width (+3 dB per halving), clamped to 0–60 dB, because a wider channel
     collects more noise at the same received signal; in RSSI mode the noise
     floor does that. An empty or invalid SNR is left alone.
-  - A link readout under the fields, in three steps: "SNR 25 dB" (source:
-    "signal to noise", "−64 dBm over −89 dBm noise", "+3 dB for 4×4") →
-    "MCS 7" ("64-QAM 5/6") → "432.4 Mbit/s" ("60% of 720.6 PHY, 2×2
-    client"; with an override: the override and "manual capacity"). It
+  - A link readout under the fields, one line of up to three steps joined
+    by chevrons: "SNR 28 dB" ("+3 dB for 4×4", or "default 25 dB" while the
+    field is invalid) → "MCS 7" ("64-QAM 5/6") → "432.4 Mbit/s" ("60% of
+    720.6 PHY, 2×2 client"; with an override: the override and "manual
+    capacity"). The SNR step is left out when it would only repeat the SNR
+    field: it shows in RSSI mode, with the 4×4 gain and for the fallback. It
     describes a 2×2 client of the radio's own standard.
   - Remove button "✕" (accessible name "Remove radio N"), hidden while only one
     radio exists. Button "+ Add radio", hidden at four radios. Removing a radio
     moves its clients to the first radio. New radios start from the default
     radio; ids stay stable so rows keep their assignment.
-  Shared helper text: "The SNR sets the MCS; 60% of its PHY rate is usable
-  capacity. Leave capacity empty for auto, or enter a measured value."
-  It shows the first error instead (field gets `aria-invalid`):
+  A shared line under the list shows the first error (field gets
+  `aria-invalid`) and is hidden otherwise:
   - "<radio label>: enter a capacity greater than 0, or clear the field for
     auto. Using … until then."
   - "<radio label>: enter an SNR from 0 to 60 dB. Using 25 dB until then." /
@@ -310,14 +323,16 @@ reachable clients, none → no recommendation):
 - Cabling for 100 m (at the recommended speed): 1 and 2.5 Gbit/s Cat5e or better, 5 Gbit/s Cat6 or
   better, 10 Gbit/s Cat6a (Cat6 up to 55 m).
 
-### Outputs (result cards, per-radio table, airtime table, breakdown table)
+### Outputs (display window, figures, details)
 
+The result plate answers first and folds the rest away (see "UI / UX").
+
+Display window:
+
+- "Recommended APs" (hero)
 - "Utilization" (hero) = `U` of the limiting radio, with colored CSS bar and %
   (cap bar fill at 100% width, keep the real number as text, e.g. "375%")
-- Verdict badge (worst radio), and the same zone legend as the wired tab
-- "Recommended APs" with note "Recommended APs for this mix (max. 60%
-  utilization per AP)"; with more than one radio: "Highest requirement of a
-  single radio (max. 60% utilization per AP)"
+- Verdict badge (worst radio)
 - With more than one radio the status note reads "Limiting radio: …"
 - Link note (second status note): clients that cannot connect (red) —
   "N clients cannot connect: 6 GHz needs Wi-Fi 6E or Wi-Fi 7. Assign them to
@@ -325,48 +340,56 @@ reachable clients, none → no recommendation):
   counted." — otherwise a radio below the MCS 0 threshold (amber) — "<radio
   label>: the SNR is below the 5 dB that MCS 0 needs. Planned at MCS 0, but
   expect dropped connections."
+- "Switch port per AP": recommended speed (e.g. "1 Gbit/s") with the note
+  "Cabling for 100 m: …" (prefixed "One port per AP, N in total. " with more
+  than one AP). Only problems add a note here: amber when the radios could
+  deliver more than even the recommendation carries — "The radios can deliver
+  up to X per AP, more than this port carries. The typical load fits, but
+  single peaks are capped at the port speed." — and red without a possible
+  speed: "The load per AP exceeds what a 10 Gbit/s port carries – check the
+  measured capacity."
+
+Figures:
+
 - "Peak demand (all at once)" = D
 - "Effective demand (at X% concurrency)" = E
 - "AP capacity (usable throughput)" = C of the limiting radio (label becomes
   "Capacity, limiting radio" with more than one radio)
-- "Avg. bandwidth per client" of the limiting radio (label becomes
-  "Avg. per client, limiting radio" with more than one radio)
+
+Details (collapsed):
+
 - "Load by radio" table: radio (band + standard, then "@ 80 MHz, 2×2," and
   "SNR 25 dB" or "manual capacity"), effective load and capacity in Mbit/s
-  (unit in the column header), utilization with verdict badge ("idle" without
-  clients), APs ("—" without clients)
-- "Clients" table, one row per client type: the type with "20 × 2 Mbit/s,
-  Wi-Fi 6, 2×2 at 80 MHz" (plus "on <radio>" with several radios) on a second
-  line; peak demand (count × Mbit/s); rate in Mbit/s with "MCS n" below it
-  ("manual" with an override); airtime of its radio. Clients that cannot
-  connect show "—" as rate and a red "No link" badge. Total row: "Total, N
-  clients", the total peak demand and, with a single radio, its utilization.
-  Note below: "Peak is count × Mbit/s per client, rate is what one client's
-  link delivers. Slower clients need more airtime for the same data; the
-  airtime of all clients on a radio adds up to its utilization."
-- "Switch port per AP": recommended speed (e.g. "1 Gbit/s") with badge
-  "Utilization X% – OK" (of the recommended speed, zone colors and verdict
-  words as for the radios),
-  note "Effective load per AP: …" (prefixed "One port per AP, N in total. "
-  with more than one AP), note "Minimum for the typical load: X (Y%
-  utilization)", "Cabling for 100 m: …", and a hint: when the recommendation
-  is above the minimum, "The radios can deliver up to X per AP. The minimum
-  carries the typical load; Y also leaves room for single peaks."; when both
-  are equal: "The radios can deliver up to X per AP, so Y also leaves room for
-  single peaks."; amber when
-  the radios could deliver more than even the recommendation carries — "The
-  radios can deliver up to X per AP, more than this port carries. The typical
-  load fits, but single peaks are capped at the port speed." Below: a
-  utilization bar per speed (1 / 2.5 / 5 / 10 Gbit/s) with the recommended one
-  highlighted and the minimum (if different) outlined. Red note without a
-  possible speed: "The load per AP exceeds what a 10 Gbit/s port carries –
-  check the capacity override."
-- Note: "Capacity is per radio. A dual-band AP (2.4 + 5/6 GHz) adds the
-  capacity of its second radio."
-- Second note, only while at least one radio is 4×4: "4×4 with clients of
+  (unit in the column header) with the average per client below the capacity
+  ("17.3 per client", radios with clients only), utilization with verdict
+  badge ("idle" without clients), APs ("—" without clients).
+  Note below: "Capacity is per radio, and "per client" is that capacity
+  divided by the radio's clients. A dual-band AP (2.4 + 5/6 GHz) adds the
+  capacity of its second radio. One AP is recommended up to 60% utilization
+  per radio."
+  Second note, only while at least one radio is 4×4: "4×4 with clients of
   fewer streams: 3 dB more link margin is added to their SNR, roughly one MCS
   step or 20% more range at the cell edge. Many 4×4 APs need PoE+ (802.3at)
   or 802.3bt to run all radios at full power — check the datasheet."
+- "Airtime by client type" table, one row per client type: the type with
+  "20 × 2 Mbit/s, Wi-Fi 6, 2×2 at 80 MHz" (plus "on <radio>" with several
+  radios) on a second line; peak demand (count × Mbit/s); rate in Mbit/s with
+  "MCS n" below it ("manual" with an override); airtime of its radio. Clients
+  that cannot connect show "—" as rate and a red "No link" badge. Total row:
+  "Total, N clients", the total peak demand and, with a single radio, its
+  utilization.
+  Note below: "Peak is count × Mbit/s per client, rate is what one client's
+  link delivers. Slower clients need more airtime for the same data; the
+  airtime of all clients on a radio adds up to its utilization."
+- "Switch port details": "Effective load per AP: …" with badge "Utilization
+  X% – OK" (of the recommended speed, zone colors and verdict words as for
+  the radios), "Minimum for the typical load: X (Y% utilization)", and how
+  the speed leaves room for peaks: when the recommendation is above the
+  minimum, "The radios can deliver up to X per AP. The minimum carries the
+  typical load; Y also leaves room for single peaks."; when both are equal:
+  "The radios can deliver up to X per AP, so Y also leaves room for single
+  peaks." Below: a utilization bar per speed (1 / 2.5 / 5 / 10 Gbit/s) with
+  the recommended one highlighted and the minimum (if different) outlined.
 
 ### Acceptance examples (must match exactly)
 
@@ -400,6 +423,13 @@ reachable clients, none → no recommendation):
   needed for switch ports, uplinks and WLAN".
 - Tab bar (pills): "Switch / wired" | "WLAN". Only one tab visible at a time.
 - Layout: two-column grid (inputs left, results right) ≥ 960 px, stacked below.
+- Result plate, same order on both tabs: a display window with the answers
+  (hero reading with scale, then the readings that follow from it below a
+  rule), a short list of figures (label left, value right) and collapsed
+  `<details>` for tables and comparisons. Warnings always show in the display
+  window, never only inside the details. The details stay as the user left
+  them while the page is open. On the WLAN tab the two hero readings sit side
+  by side and stack when the plate is narrower than 26rem.
 - Input rows (client mix and radio list): numbers sit in recessed readout
   windows with their unit inside; choices are native selects shown as text
   with a dotted underline, only as wide as their selected label (CSS
@@ -419,7 +449,7 @@ reachable clients, none → no recommendation):
 - The radio list uses three lines per radio: "Radio N" (only with several
   radios), profile "@" channel width and spatial streams, remove; the
   SNR/RSSI switch, the signal window, (RSSI only) the noise floor window and
-  the capacity window; the link readout.
+  "Set capacity" or the capacity window; the one-line link readout.
 - Everything recalculates live on every input change (no calculate button).
   About a second after the last edit, a polite status summarizes the main
   result for screen readers.
@@ -432,7 +462,8 @@ reachable clients, none → no recommendation):
   ("Recommended uplink" / "Recommended APs", utilization with verdict) while
   the result card is out of view; it links to the results ("Show all
   results"). Result tables reflow down to 320 px; the per-radio table scrolls
-  inside its own box if it still does not fit.
+  inside its own box if it still does not fit (checked again when its details
+  open).
 - `<details>` "Assumptions & notes" per tab: 2–3 sentences explaining the
   model, stating that all default values are editable and are conservative
   planning values.
@@ -459,15 +490,16 @@ Binding quality floor (everything else is the designer's intentional choice):
   `prefers-reduced-motion` respected; body text contrast at least WCAG AA;
   field boundaries at least 3:1; touch targets at least 44 px on phones.
 - Content column `max-width` ~1200 px centered, line lengths < 80 chars.
-- Big result numbers as visual anchors (~1.8rem+ / 700 weight).
+- Big result numbers as visual anchors (~1.8rem+ / 700 weight); the figures
+  behind them step back to 1.25rem.
 - Number formatting: English (`Intl.NumberFormat('en-US')`), units "Mbit/s",
   "Gbit/s" (use Gbit/s when value ≥ 1000), percentages with one decimal below
   100% and no space: "36.7%"; whole numbers from 100% up: "1500%".
 
 ## Edge cases (must be handled)
 
-- Empty mix / all counts 0: show "—" on every result card (including the
-  WLAN capacity card) and a neutral hint "No clients configured. Add a client
+- Empty mix / all counts 0: show "—" on every reading and figure (including
+  the WLAN capacity) and a neutral hint "No clients configured. Add a client
   type or enter a count above 0." No NaN/Infinity anywhere; verdict hidden.
 - Invalid/empty number fields: treat as 0 for calculation without crashing.
 - Capacity field empty: auto (derived). Override ≤ 0 or not a number: use
